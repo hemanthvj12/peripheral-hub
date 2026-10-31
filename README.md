@@ -1,5 +1,7 @@
 # PeripheralHub
 
+[![Build and test](https://github.com/hemanthvj12/peripheral-hub/actions/workflows/build.yml/badge.svg)](https://github.com/hemanthvj12/peripheral-hub/actions/workflows/build.yml)
+
 One data layer for all your peripherals: battery level, whether each device is reachable, and how it is connected (cable, 2.4G receiver or Bluetooth), updated live. It talks to the devices directly, so no vendor software needs to run.
 
 <p align="center">

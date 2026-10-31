@@ -1,0 +1,44 @@
+# Builds the whole solution (app, library, plugins) and runs the tests on every push to main and every pull request.
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # WPF and the Windows device APIs need Windows.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      # The app targets win-x64 only in Release, so restore must know the configuration too.
+      - name: Restore
+        run: dotnet restore PeripheralHub.sln -p:Configuration=Release
+
+      - name: Build
+        run: dotnet build PeripheralHub.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test PeripheralHub.sln -c Release --no-build --logger "trx;LogFileName=results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: ignore
