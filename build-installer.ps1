@@ -16,8 +16,11 @@
     The release version, e.g. 1.1.0. Must be higher than the last published release for updates to pick it up.
 
 .PARAMETER Publish
-    Upload to https://github.com/hemanthvj12/peripheral-hub releases (uses the gh CLI's login for the token).
+    Upload to https://github.com/hemanthvj12/peripheral-hub releases. Uses $env:GITHUB_TOKEN when set (the release
+    workflow, .github/workflows/release.yml), else the gh CLI's login.
     Installed copies pick the new release up at their next update check.
+    Normally you don't run this with -Publish yourself: push a tag (git tag v1.2.3; git push origin v1.2.3) and
+    GitHub builds, tests and publishes the release.
 
 .EXAMPLE
     ./build-installer.ps1 -Version 1.1.0
@@ -50,7 +53,8 @@ try {
 
     if ($Publish) {
         # Fetch the previous release so vpk can build a small delta update from it.
-        $token = (& 'C:\Program Files\GitHub CLI\gh.exe' auth token).Trim()
+        $token = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } else { (& 'C:\Program Files\GitHub CLI\gh.exe' auth token).Trim() }
+        if (-not $token) { throw 'No GitHub token: set GITHUB_TOKEN or log in with gh.' }
         dotnet vpk download github --repoUrl $repoUrl --token $token -o $outputDir
     }
 

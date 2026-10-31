@@ -48,11 +48,22 @@ Run **`PeripheralHub-win-Setup.exe`**. It installs for the current user without 
 
 **Log:** the tray menu's *Open log folder* opens `%APPDATA%\PeripheralHub\logs`. `peripheralhub.log` records startup, plugins turning on, update checks and crashes. It is kept to about 2 MB. The tray menu also shows the running version.
 
-### Building the installer
+### Releasing
+
+Push a version tag and GitHub does the rest (`.github/workflows/release.yml`): it checks the tag is on `main`, builds, runs the tests and publishes the release with Setup and the update packages. Installed copies update to it at their next check.
+
+```powershell
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Each release needs a higher version than the last. *Run workflow* on the Release workflow's page in the Actions tab is a trial run: it builds the installer for a version you type and keeps it as a download, without publishing.
+
+### Building the installer locally
 
 ```powershell
 ./build-installer.ps1 -Version 1.1.0            # artifacts\installer\PeripheralHub-win-Setup.exe + update packages
-./build-installer.ps1 -Version 1.1.0 -Publish   # also uploads them as GitHub release v1.1.0 (uses gh's login)
+./build-installer.ps1 -Version 1.1.0 -Publish   # also uploads them as GitHub release v1.1.0 (uses gh's login; normally the tag does this)
 ```
 
 It publishes the app and packs it with [Velopack](https://velopack.io) (`vpk`, pinned in `.config/dotnet-tools.json`; `dotnet tool restore` fetches it). Each release needs a higher version than the last.
