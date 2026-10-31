@@ -2,6 +2,15 @@
 
 One data layer for all your peripherals: battery level, whether each device is reachable, and how it is connected (cable, 2.4G receiver or Bluetooth), updated live. It talks to the devices directly, so no vendor software needs to run.
 
+<p align="center">
+  <img src="docs/screenshots/panel.png" alt="The tray panel: a monitor, keyboard, mouse, headset, earbuds and a controller with their connection and battery" width="300">
+  &nbsp;
+  <img src="docs/screenshots/widget.png" alt="The desktop widget showing the same devices in a compact list" width="210">
+  &nbsp;
+  <img src="docs/screenshots/menu.png" alt="The app menu with widget, controller and app settings" width="270">
+</p>
+<p align="center"><sub>The tray panel, the desktop widget and the menu</sub></p>
+
 | Device | Cable | 2.4G receiver | Bluetooth |
 |---|---|---|---|
 | Kreo Ikarus | battery %, charging | battery %, charging, online/asleep/offline | battery % (from Windows), no charging state |
