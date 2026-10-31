@@ -7,8 +7,11 @@ namespace PeripheralHub.Transport;
 /// <summary>A Bluetooth LE device Windows knows about (paired), with the battery level Windows keeps for it.</summary>
 /// <param name="BatteryPercent">Windows' cached Battery Service value. Stale while <see cref="Connected"/> is false.</param>
 /// <param name="Category">Windows' device categories, e.g. "Input.Mouse", "Communication.Headset.Bluetooth".</param>
+/// <param name="Container">
+/// Windows' container id of the device: its other parts (e.g. a headset's sound endpoints) share it.
+/// </param>
 public sealed record BleDeviceInfo(string Mac, ushort VendorId, ushort ProductId, string? Name, bool Connected,
-    int? BatteryPercent, DateTimeOffset? BatteryUpdatedAt, IReadOnlyList<string>? Category = null);
+    int? BatteryPercent, DateTimeOffset? BatteryUpdatedAt, IReadOnlyList<string>? Category = null, Guid? Container = null);
 
 /// <summary>
 /// A classic Bluetooth device Windows knows about (paired): earphones, headsets, controllers…
@@ -20,8 +23,12 @@ public sealed record BleDeviceInfo(string Mac, ushort VendorId, ushort ProductId
 /// Service class IDs the device offers (one Windows node each), e.g. hands-free 0000111E-… or a maker's own serial
 /// service such as Nothing's AEAC4A03-… ("NT LINK"). Lets plugins recognise devices they can talk to.
 /// </param>
+/// <param name="Container">
+/// Windows' container id of the device: its other parts (e.g. a headset's sound endpoints) share it.
+/// </param>
 public sealed record ClassicBtDeviceInfo(string Mac, ushort? VendorId, ushort? ProductId, string? Name, bool Connected,
-    int? BatteryPercent, DateTimeOffset? BatteryUpdatedAt, IReadOnlyList<string>? Category, IReadOnlyList<Guid>? Services = null)
+    int? BatteryPercent, DateTimeOffset? BatteryUpdatedAt, IReadOnlyList<string>? Category, IReadOnlyList<Guid>? Services = null,
+    Guid? Container = null)
 {
     public bool HasService(Guid service) => Services?.Contains(service) == true;
 }
@@ -38,6 +45,8 @@ public static partial class BluetoothDevices
     internal static readonly Win32.DevPropKey DeviceDesc = new("A45C254E-DF1C-4EFD-8020-67D146A850E0", 2);
     // DEVPKEY_DeviceContainer_Category: Windows' own device categories (string list).
     private static readonly Win32.DevPropKey ContainerCategory = new("78C34FC8-104A-4ACA-9EA4-524D52996E57", 90);
+    // DEVPKEY_Device_ContainerId.
+    private static readonly Win32.DevPropKey ContainerId = new("8C7ED206-3F8A-4827-B3AB-AE9E1FAEFC6C", 2);
 
     // e.g. BTHLEDEVICE\{00001800-...}_DEV_VID&023554_PID&FA07_REV&6701_E3669A310B47\...
     [GeneratedRegex(@"_DEV_VID&02([0-9A-F]{4})_PID&([0-9A-F]{4})_REV&[0-9A-F]+_([0-9A-F]{12})\\", RegexOptions.IgnoreCase)]
@@ -68,7 +77,7 @@ public static partial class BluetoothDevices
             if (Win32.CM_Locate_DevNodeW(out int inst, node, Win32.CmLocateDevNodePhantom) != Win32.CrSuccess) continue;
             result.Add(new BleDeviceInfo(mac.ToLowerInvariant(), vp.Vid, vp.Pid,
                 ReadString(inst, FriendlyName), ReadBool(inst, Connected) ?? false,
-                ReadByte(inst, Battery), ReadFileTime(inst, BatteryTime), ReadStringList(inst, ContainerCategory)));
+                ReadByte(inst, Battery), ReadFileTime(inst, BatteryTime), ReadStringList(inst, ContainerCategory), ReadGuid(inst, ContainerId)));
         }
         return result;
     }
@@ -108,7 +117,7 @@ public static partial class BluetoothDevices
                 vendor.ContainsKey(mac) ? vp.Vid : null, vendor.ContainsKey(mac) ? vp.Pid : null,
                 ReadString(inst, FriendlyName), ReadBool(inst, Connected) ?? false,
                 battery.ContainsKey(mac) ? b.Percent : null, battery.ContainsKey(mac) ? b.At : null,
-                ReadStringList(inst, ContainerCategory), services.GetValueOrDefault(mac)));
+                ReadStringList(inst, ContainerCategory), services.GetValueOrDefault(mac), ReadGuid(inst, ContainerId)));
         }
         return result;
     }
@@ -151,6 +160,7 @@ public static partial class BluetoothDevices
     }
 
     private static int? ReadByte(int inst, Win32.DevPropKey key) => Read(inst, key, Win32.DevPropTypeByte) is { } b ? b[0] : null;
+    private static Guid? ReadGuid(int inst, Win32.DevPropKey key) => Read(inst, key, Win32.DevPropTypeGuid) is { Length: 16 } b ? new Guid(b) : null;
     private static bool? ReadBool(int inst, Win32.DevPropKey key) => Read(inst, key, Win32.DevPropTypeBoolean) is { } b ? b[0] != 0 : null;
     internal static string? ReadString(int inst, Win32.DevPropKey key) =>
         Read(inst, key, Win32.DevPropTypeString) is { } b ? Encoding.Unicode.GetString(b).TrimEnd('\0') : null;

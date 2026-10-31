@@ -103,15 +103,20 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         set => (_volume ??= NewSender(MonitorSetting.Volume)).Set(value);
     }
 
-    // ---- Sound devices (USB headsets): a "Set as default" button in the drawer ----
+    // ---- Sound devices (USB headsets, Bluetooth audio): a "Set as default" button in the drawer ----
     public bool HasSound => IsOnline && _s.Sound is not null;
     public bool IsDefaultSound => _s.Sound?.IsDefault == true;
     public bool CanSetDefaultSound => HasSound && !IsDefaultSound;
     public string SoundButtonText => IsDefaultSound ? "Default sound device" : "Set as default";
     public string SoundButtonGlyph => IsDefaultSound ? "" : ""; // CheckMark / Volume
-    public string SoundTooltip => IsDefaultSound
-        ? "Windows plays sound through this headset and uses its mic"
-        : "Make this headset Windows' sound output and mic";
+    // USB headsets switch speakers and mic; Bluetooth audio only its speakers (HasInput false).
+    public string SoundTooltip => (IsDefaultSound, _s.Sound?.HasInput == true) switch
+    {
+        (true, true) => "Windows plays sound through this headset and uses its mic",
+        (true, false) => "Windows plays sound through this device",
+        (false, true) => "Make this headset Windows' sound output and mic",
+        (false, false) => "Make this Windows' sound output (the mic stays as it is)",
+    };
 
     // ---- Monitor speaker mute: the speaker icon left of the volume slider is a button ----
 

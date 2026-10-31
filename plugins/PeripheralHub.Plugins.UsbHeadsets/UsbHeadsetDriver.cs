@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using PeripheralHub.Devices;
+using PeripheralHub.Transport;
 
 namespace PeripheralHub.Plugins.UsbHeadsets;
 
@@ -120,7 +121,7 @@ internal sealed class UsbHeadsetDriver(PeripheralHubOptions options) : IDeviceDr
         foreach (var h in context.Hid.Where(h => h.UsagePage == 0x01 && h.Usage is 0x04 or 0x05 && !h.IsBluetooth))
         {
             if (!_gamepadContainers.TryGetValue(h.Path, out var container))
-                _gamepadContainers[h.Path] = container = Transport.DeviceTree.InstanceIdFromPath(h.Path) is { } id ? CoreAudio.ContainerOf(id) : null;
+                _gamepadContainers[h.Path] = container = DeviceTree.InstanceIdFromPath(h.Path) is { } id ? CoreAudio.ContainerOf(id) : null;
             if (container is { } c) result.Add(c);
         }
         return result;

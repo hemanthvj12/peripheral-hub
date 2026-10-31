@@ -46,7 +46,7 @@ internal static class Win32
     // Bluetooth device nodes report as "not present" to cfgmgr32, so they must be located as phantoms.
     public const int CmLocateDevNodePhantom = 0x1;
     public const int CmGetIdListFilterEnumerator = 0x1, CmGetIdListFilterPresent = 0x100;
-    public const int DevPropTypeByte = 0x3, DevPropTypeFileTime = 0x10, DevPropTypeBoolean = 0x11, DevPropTypeString = 0x12,
+    public const int DevPropTypeByte = 0x3, DevPropTypeGuid = 0xD, DevPropTypeFileTime = 0x10, DevPropTypeBoolean = 0x11, DevPropTypeString = 0x12,
         DevPropTypeStringList = 0x2012;
 
     [StructLayout(LayoutKind.Sequential)]

@@ -8,7 +8,9 @@ public static class PluginApi
     // 2: monitors (DeviceKind.Monitor, display connection types, DeviceSnapshot.Monitor, IMonitorControlDriver) and
     //    sound devices (DeviceSnapshot.Sound, ISoundDeviceDriver).
     // 3: HidConnection.ReportSpanReceived (input reports without a copy each).
-    public const int Version = 3;
+    // 4: Transport.CoreAudio / AudioEndpoint (Windows' sound devices and the default-device switch, moved from the
+    //    USB headsets plugin so the hub can offer "Set as default" for Bluetooth audio too).
+    public const int Version = 4;
 }
 
 /// <summary>

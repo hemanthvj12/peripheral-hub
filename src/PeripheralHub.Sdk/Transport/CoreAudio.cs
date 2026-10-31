@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace PeripheralHub.Plugins.UsbHeadsets;
+namespace PeripheralHub.Transport;
 
 /// <summary>One active Windows sound endpoint.</summary>
 /// <param name="Id">Windows' endpoint id (what "set as default" takes).</param>
@@ -8,10 +8,24 @@ namespace PeripheralHub.Plugins.UsbHeadsets;
 /// <param name="AdapterName">The device's own name, e.g. "4- CB CryoCore" (Windows numbers repeated installs).</param>
 /// <param name="Container">The physical device it belongs to: a headset's speakers and mic share it.</param>
 /// <param name="Enumerator">The bus: "USB", "HDAUDIO", "BTHENUM", "ROOT" (software devices)…</param>
-internal sealed record AudioEndpoint(string Id, bool IsOutput, string AdapterName, Guid Container, string Enumerator);
+/// <param name="FormFactor">
+/// Windows' endpoint form factor when known: 1 speakers, 3 headphones, 4 microphone, 5 headset, 6 handset… A classic
+/// Bluetooth headset can list two outputs: its stereo one (headphones/speakers) and a hands-free one (headset: call
+/// quality, paired with its mic).
+/// </param>
+public sealed record AudioEndpoint(string Id, bool IsOutput, string AdapterName, Guid Container, string Enumerator, int? FormFactor = null)
+{
+    public const int FormHeadset = 5, FormHandset = 6;
 
-/// <summary>Windows' sound devices (Core Audio, MMDevice API) and the default-device switch.</summary>
-internal static class CoreAudio
+    /// <summary>A call-quality output (a Bluetooth headset's hands-free profile), not a stereo one.</summary>
+    public bool IsHandsFree => IsOutput && FormFactor is FormHeadset or FormHandset;
+}
+
+/// <summary>
+/// Windows' sound devices (Core Audio, MMDevice API) and the default-device switch. Cheap (no device traffic); works
+/// from any thread.
+/// </summary>
+public static class CoreAudio
 {
     private const int Render = 0, Capture = 1, StateActive = 1;
     private const int RoleConsole = 0, RoleMultimedia = 1, RoleCommunications = 2;
@@ -19,6 +33,7 @@ internal static class CoreAudio
     private static readonly PropertyKey FriendlyAdapterName = new(new Guid("026e516e-b814-414b-83cd-856d6fef4822"), 2);
     private static readonly PropertyKey ContainerId = new(new Guid("8c7ed206-3f8a-4827-b3ab-ae9e1faefc6c"), 2);
     private static readonly PropertyKey EnumeratorName = new(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 24);
+    private static readonly PropertyKey FormFactorKey = new(new Guid("1da5d803-d492-4edd-8c23-e0c0ffee7f0e"), 0);
 
     public static List<AudioEndpoint> ActiveEndpoints()
     {
@@ -39,7 +54,7 @@ internal static class CoreAudio
                         try
                         {
                             result.Add(new AudioEndpoint(id, flow == Render, ReadString(props, FriendlyAdapterName) ?? "",
-                                ReadGuid(props, ContainerId) ?? Guid.Empty, ReadString(props, EnumeratorName) ?? ""));
+                                ReadGuid(props, ContainerId) ?? Guid.Empty, ReadString(props, EnumeratorName) ?? "", ReadUInt(props, FormFactorKey)));
                         }
                         finally { Marshal.ReleaseComObject(props); }
                     }
@@ -108,6 +123,14 @@ internal static class CoreAudio
         var k = key;
         if (props.GetValue(ref k, out var v) != 0) return null;
         try { return v.Type == 31 /* VT_LPWSTR */ ? Marshal.PtrToStringUni(v.Pointer) : null; }
+        finally { PropVariantClear(ref v); }
+    }
+
+    private static int? ReadUInt(IPropertyStore props, PropertyKey key)
+    {
+        var k = key;
+        if (props.GetValue(ref k, out var v) != 0) return null;
+        try { return v.Type == 19 /* VT_UI4 */ ? (int)(v.Pointer.ToInt64() & 0xFFFFFFFF) : null; }
         finally { PropVariantClear(ref v); }
     }
 

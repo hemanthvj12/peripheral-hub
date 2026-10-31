@@ -29,12 +29,12 @@ public partial class FlyoutWindow : Window
 
     /// <summary>
     /// Clicking the tray icon while the panel is open first deactivates (hides) it, then the click would reopen it.
-    /// Treat a click right after hiding as "close".
+    /// Treat a click right after hiding as "close" (<paramref name="force"/> skips that, for the keyboard shortcut).
     /// </summary>
-    public void Toggle()
+    public void Toggle(bool force = false)
     {
         if (IsVisible) { Hide(); return; }
-        if ((DateTime.Now - _hiddenAt).TotalMilliseconds < 300) return;
+        if (!force && (DateTime.Now - _hiddenAt).TotalMilliseconds < 300) return;
         Show();
         UpdateLayout();
         PlaceNearTray();

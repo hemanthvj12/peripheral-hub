@@ -1,4 +1,5 @@
 using PeripheralHub.Plugins.UsbHeadsets;
+using PeripheralHub.Transport;
 
 namespace PeripheralHub.Tests;
 

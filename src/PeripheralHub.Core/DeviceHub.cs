@@ -34,6 +34,7 @@ public sealed class DeviceHub : IDisposable
     private readonly ActivatedPlugins? _activated;
     private readonly HashSet<string> _failed = new(StringComparer.OrdinalIgnoreCase);
     private readonly HidEnumerator _hid = new();
+    private readonly BluetoothSound _bluetoothSound = new();
     private readonly SemaphoreSlim _signal = new(0, 1);
     private readonly CancellationTokenSource _cts = new();
     private readonly object _publishLock = new();
@@ -210,14 +211,21 @@ public sealed class DeviceHub : IDisposable
         }
     }
 
-    /// <summary>Makes a sound device (USB headset) Windows' default output and mic (see <see cref="ISoundDeviceDriver"/>).</summary>
+    /// <summary>
+    /// Makes a sound device Windows' default: a USB headset's speakers and mic through its driver (see
+    /// <see cref="ISoundDeviceDriver"/>), or a Bluetooth audio device's speakers (see <see cref="BluetoothSound"/>).
+    /// </summary>
     /// <returns>Null on success, else a short message for the user.</returns>
     public async Task<string?> MakeDefaultSoundDeviceAsync(string deviceId)
     {
-        if (DriverOf<ISoundDeviceDriver>(deviceId) is not { } sd) return "This device isn't a sound device.";
+        var sd = DriverOf<ISoundDeviceDriver>(deviceId);
+        var mac = sd is null ? Devices.FirstOrDefault(d => d.Id == deviceId)?.BluetoothMac : null;
+        if (sd is null && !_bluetoothSound.Handles(mac)) return "This device isn't a sound device.";
         try
         {
-            var error = await sd.MakeDefaultSoundDeviceAsync(deviceId, _cts.Token).ConfigureAwait(false);
+            var error = sd is not null
+                ? await sd.MakeDefaultSoundDeviceAsync(deviceId, _cts.Token).ConfigureAwait(false)
+                : await _bluetoothSound.MakeDefaultAsync(mac!, _cts.Token).ConfigureAwait(false);
             _options.Log?.Invoke($"Default sound device → {deviceId}: {error ?? "done"}");
             Signal();
             return error;
@@ -301,7 +309,27 @@ public sealed class DeviceHub : IDisposable
             }
             catch (Exception ex) { _options.Log?.Invoke($"{d.GetType().Name}.Update failed: {ex}"); }
         }
+
+        // Connected Bluetooth audio devices whose driver doesn't handle sound itself get "Set as default".
+        try
+        {
+            var nodes = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+            foreach (var d in context.BluetoothClassic) if (d.Container is { } c) nodes.TryAdd(d.Mac, c);
+            foreach (var d in context.BluetoothLe) if (d.Container is { } c) nodes.TryAdd(d.Mac, c);
+            var containers = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+            foreach (var s in Snapshots(_pluginDrivers.Concat(_otherDrivers), now))
+                if (s is { Kind: DeviceKind.Audio, State: LinkState.Online, Sound: null, BluetoothMac: { } mac } && nodes.TryGetValue(mac, out var c))
+                    containers.TryAdd(mac, c);
+            _bluetoothSound.Update(containers);
+        }
+        catch (Exception ex) { _options.Log?.Invoke($"Bluetooth sound devices failed: {ex}"); }
     }
+
+    private IEnumerable<DeviceSnapshot> Snapshots(IEnumerable<IDeviceDriver> drivers, DateTimeOffset now) => drivers.SelectMany(d =>
+    {
+        try { return d.GetSnapshots(now); }
+        catch (Exception ex) { _options.Log?.Invoke($"{d.GetType().Name}.GetSnapshots failed: {ex}"); return []; }
+    });
 
     private void Publish()
     {
@@ -309,15 +337,11 @@ public sealed class DeviceHub : IDisposable
         lock (_publishLock)
         {
             var now = DateTimeOffset.Now;
-            IEnumerable<DeviceSnapshot> From(IEnumerable<IDeviceDriver> drivers) => drivers.SelectMany(d =>
-            {
-                try { return d.GetSnapshots(now); }
-                catch (Exception ex) { _options.Log?.Invoke($"{d.GetType().Name}.GetSnapshots failed: {ex}"); return []; }
-            });
             // Grouped by type in DeviceOrder (monitors, keyboards, mice, audio, controllers). Within a type, plugin
             // devices come first, then other Bluetooth devices in the order they appeared (the sort is stable).
-            var current = From(_pluginDrivers)
-                .Concat(From(_otherDrivers))
+            var current = Snapshots(_pluginDrivers, now)
+                .Concat(Snapshots(_otherDrivers, now))
+                .Select(_bluetoothSound.Decorate)
                 .OrderBy(s => DeviceOrder.Of(s.Kind))
                 .ToList();
 

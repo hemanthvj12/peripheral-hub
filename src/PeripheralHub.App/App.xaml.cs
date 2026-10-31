@@ -63,6 +63,8 @@ public partial class App : Application
         Tray.AttachMenu(_flyout.Menu);
         _flyout.Menu.ActionInvoked += _flyout.CloseMenu;
         Tray.OpenRequested += () => _flyout.Toggle();
+        _hotkey = new GlobalHotkey(GlobalHotkey.Modifiers.Control | GlobalHotkey.Modifiers.Alt, 0x50 /* P */, ToggleFromHotkey);
+        if (!_hotkey.IsRegistered) AppLog.Write("Ctrl+Alt+P is taken by another app; the panel opens from the tray icon only");
         Tray.ExitRequested += Shutdown;
         Tray.WidgetToggled += () =>
         {
@@ -93,6 +95,18 @@ public partial class App : Application
 
         if (e.Args.Contains("--open"))
             Dispatcher.BeginInvoke(async () => { await Task.Delay(1500); _flyout.Toggle(); });
+    }
+
+    private GlobalHotkey? _hotkey;
+
+    /// <summary>
+    /// Ctrl+Alt+P. Unlike a tray click, pressing it while the panel is open doesn't hide the panel first (it keeps
+    /// focus), so it's a plain show/hide; <see cref="FlyoutWindow.Toggle"/>'s "just hidden" guard is skipped.
+    /// </summary>
+    private void ToggleFromHotkey()
+    {
+        if (_flyout.IsVisible) _flyout.Hide();
+        else _flyout.Toggle(force: true);
     }
 
     private bool _locked;
@@ -138,6 +152,7 @@ public partial class App : Application
     {
         if (_hub is not null) AppLog.Write("PeripheralHub exiting");
         Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
+        _hotkey?.Dispose();
         Tray?.Dispose();
         _hub?.Dispose();
         _singleInstance?.Dispose();

@@ -85,7 +85,7 @@ A plugin folder has:
   `artifacts/plugins/<Config>/<id>`, which the app ships). Add it to the solution (`dotnet sln add … --solution-folder plugins`).
 - `<Name>Protocol.cs`: pure functions (build request, checksum, parse reply), no I/O, so they're testable.
 - `<Name>Driver.cs`: an `IDeviceDriver`; `<Name>Plugin.cs`: the one public `IDevicePlugin` class.
-- `plugin.json`: `id`, `name`, `version`, `sdkVersion` 3, `assembly`, `devices` (every USB ID and Bluetooth vendor/product
+- `plugin.json`: `id`, `name`, `version`, `sdkVersion` 4, `assembly`, `devices` (every USB ID and Bluetooth vendor/product
   it handles: this is what turns the plugin on when the device appears, and Bluetooth entries keep the generic
   Bluetooth driver away), `vendorApps` (so the hub pauses while the maker's app runs and
   the panel tile opens it). Use `/` in paths.
