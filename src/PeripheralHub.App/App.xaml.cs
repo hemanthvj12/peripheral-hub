@@ -81,14 +81,42 @@ public partial class App : Application
         };
 
         _hub.DevicesChanged += (_, args) => Dispatcher.BeginInvoke(() => Devices.Apply(args.Devices, args.PairedBluetooth));
-        // Tiles with their controls open are followed live (the Nothing plugin keeps the earbuds' channel open then).
-        _hub.SetWatched(Devices.WatchedIds);
-        Devices.WatchedChanged += ids => _hub?.SetWatched(ids);
+        // Tiles with their controls open are followed live (the Nothing plugin keeps the earbuds' channel open, monitors
+        // are read every 3 s), but only while someone can see them: the panel or widget is showing and the PC isn't locked.
+        _flyout.IsVisibleChanged += (_, _) => UpdateWatched();
+        _widget.IsVisibleChanged += (_, _) => UpdateWatched();
+        Devices.WatchedChanged += _ => UpdateWatched();
+        Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
+        UpdateWatched();
         _hub.Start();
         Updater.Start();
 
         if (e.Args.Contains("--open"))
             Dispatcher.BeginInvoke(async () => { await Task.Delay(1500); _flyout.Toggle(); });
+    }
+
+    private bool _locked;
+
+    private void OnSessionSwitch(object? sender, Microsoft.Win32.SessionSwitchEventArgs e)
+    {
+        bool locked = e.Reason switch
+        {
+            Microsoft.Win32.SessionSwitchReason.SessionLock or Microsoft.Win32.SessionSwitchReason.ConsoleDisconnect => true,
+            Microsoft.Win32.SessionSwitchReason.SessionUnlock or Microsoft.Win32.SessionSwitchReason.ConsoleConnect => false,
+            _ => _locked,
+        };
+        Dispatcher.BeginInvoke(() => { _locked = locked; UpdateWatched(); });
+    }
+
+    private bool _watching;
+
+    /// <summary>Hands the hub the open tiles while one of our windows is on screen, else nothing (drivers fall back to their slow poll).</summary>
+    private void UpdateWatched()
+    {
+        bool watching = !_locked && (_flyout.IsVisible || _widget.IsVisible);
+        _hub?.SetWatched(watching ? Devices.WatchedIds : []);
+        if (watching != _watching) AppLog.Write(watching ? "Following open tiles live" : "Stopped following open tiles (nothing on screen)");
+        _watching = watching;
     }
 
     /// <summary>From a tile's noise-control row. Returns null on success, else a message for the user.</summary>
@@ -109,6 +137,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         if (_hub is not null) AppLog.Write("PeripheralHub exiting");
+        Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
         Tray?.Dispose();
         _hub?.Dispose();
         _singleInstance?.Dispose();
