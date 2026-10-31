@@ -139,7 +139,7 @@ A folder that can't be used (bad manifest, needs a newer plugin API) is skipped,
 | Field | Meaning |
 |---|---|
 | `id`, `name`, `version` | Lower-case id, display name, `major.minor.patch` |
-| `sdkVersion` | Plugin API version it was built for (currently 2; 2 added monitors and sound devices) |
+| `sdkVersion` | Plugin API version it was built for (currently 3; 2 added monitors and sound devices, 3 added `HidConnection.ReportSpanReceived` for reading streaming input reports without a copy each) |
 | `assembly` | The dll, relative to the folder. It must have exactly one public class implementing `IDevicePlugin` |
 | `devices` | IDs it handles: `connection` (`usb` or `bluetooth`), hex `vendorId`, optional `productId` (omitted = every product of that vendor) and `manufacturer`. Bluetooth entries keep the generic Bluetooth driver away from those devices |
 | `alwaysOn` | `true` turns the plugin on at every start without detection, for devices the scan can't see (Xbox controllers via XInput, monitors) |

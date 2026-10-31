@@ -2,8 +2,12 @@ using PeripheralHub.Native;
 
 namespace PeripheralHub.Transport;
 
+/// <summary>An input report, valid only during the call.</summary>
+public delegate void HidReportHandler(ReadOnlySpan<byte> report);
+
 /// <summary>
-/// An open HID collection with one continuous reader. All input reports go to <see cref="ReportReceived"/>;
+/// An open HID collection with one continuous reader. All input reports go to <see cref="ReportReceived"/> and
+/// <see cref="ReportSpanReceived"/>;
 /// <see cref="RequestAsync"/> writes a request and waits for the first report that matches it.
 /// A single reader matters: a second pending read would silently swallow replies.
 /// </summary>
@@ -17,7 +21,14 @@ public sealed class HidConnection : IDisposable
     private Task? _reader;
 
     public HidDeviceInfo Info { get; }
+    /// <summary>Each input report as its own array (a copy per report).</summary>
     public event Action<byte[]>? ReportReceived;
+    /// <summary>
+    /// Each input report without a copy: the span points into the read buffer, which the next read reuses, so it is only
+    /// valid during the call. Meant for devices that stream (a game controller sends up to ~250 reports a second);
+    /// copy anything you keep.
+    /// </summary>
+    public event HidReportHandler? ReportSpanReceived;
     /// <summary>Raised once when reading fails (typically the device was unplugged).</summary>
     public event Action<Exception>? Closed;
     public bool IsClosed { get; private set; }
@@ -55,21 +66,38 @@ public sealed class HidConnection : IDisposable
             {
                 int n = await _stream.ReadAsync(buffer, _cts.Token).ConfigureAwait(false);
                 if (n <= 0) throw new IOException("HID read returned no data");
-                var report = buffer.AsSpan(0, n).ToArray();
-
-                TaskCompletionSource<byte[]>? reply = null;
-                lock (_pendingLock)
-                {
-                    if (_pending is { } p && p.Match(report)) { reply = p.Tcs; _pending = null; }
-                }
-                reply?.TrySetResult(report);
-                ReportReceived?.Invoke(report);
+                Dispatch(buffer, n);
             }
         }
         catch (Exception ex) when (ex is IOException or OperationCanceledException or ObjectDisposedException or UnauthorizedAccessException)
         {
             if (!IsClosed) { IsClosed = true; Closed?.Invoke(ex); }
         }
+    }
+
+    /// <summary>
+    /// Hands one report to a waiting request and the listeners. A copy is made only when something needs its own array
+    /// (a pending request or a <see cref="ReportReceived"/> listener), so a streaming controller read through
+    /// <see cref="ReportSpanReceived"/> allocates nothing per report.
+    /// </summary>
+    private void Dispatch(byte[] buffer, int length)
+    {
+        var report = new ReadOnlySpan<byte>(buffer, 0, length);
+        byte[]? copy = null;
+
+        TaskCompletionSource<byte[]>? reply = null;
+        lock (_pendingLock)
+        {
+            if (_pending is { } p)
+            {
+                copy = report.ToArray();
+                if (p.Match(copy)) { reply = p.Tcs; _pending = null; }
+            }
+        }
+        if (reply is not null) reply.TrySetResult(copy!);
+
+        if (ReportReceived is { } listeners) listeners(copy ??= report.ToArray());
+        ReportSpanReceived?.Invoke(report);
     }
 
     /// <summary>Sends <paramref name="request"/> (padded to the output report length) and waits for a matching reply, or null on timeout/failure.</summary>

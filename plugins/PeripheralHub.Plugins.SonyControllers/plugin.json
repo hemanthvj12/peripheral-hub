@@ -1,8 +1,8 @@
 {
   "id": "sony-controllers",
   "name": "PlayStation controllers",
-  "version": "1.3.0",
-  "sdkVersion": 1,
+  "version": "1.4.0",
+  "sdkVersion": 3,
   "assembly": "PeripheralHub.Plugins.SonyControllers.dll",
   "devices": [
     { "connection": "usb", "vendorId": "054C", "productId": "0CE6" },

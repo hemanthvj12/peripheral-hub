@@ -230,7 +230,8 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
                 Mac = ReadMac();
                 Key = Mac ?? $"path-{(uint)StringComparer.OrdinalIgnoreCase.GetHashCode(conn.Info.Path):x8}";
             }
-            conn.ReportReceived += OnReport;
+            // Without a copy per report: a controller streams up to ~250 reports a second and OnReport keeps none of them.
+            conn.ReportSpanReceived += OnReport;
             conn.Closed += _ => Changed?.Invoke();
         }
 
@@ -264,11 +265,12 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
             _conn.GetFeature(id, len);
         }
 
-        private void OnReport(byte[] report)
+        private void OnReport(ReadOnlySpan<byte> report)
         {
+            if (report.IsEmpty) return;
             var now = DateTimeOffset.Now;
             LastReportAt = now;
-            if (IsBluetooth && report.Length > 0) InFullMode = report[0] != 0x01;
+            if (IsBluetooth) InFullMode = report[0] != 0x01;
 
             // Still getting short reports (e.g. after a reconnect): ask again, at most every 2 s.
             if (IsBluetooth && report[0] == 0x01 && _maySwitch() && Environment.TickCount64 - Interlocked.Read(ref _lastEnableTicks) > 2000)
