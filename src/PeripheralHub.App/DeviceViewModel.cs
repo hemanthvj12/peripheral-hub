@@ -30,7 +30,12 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
 
     public void Update(DeviceSnapshot s)
     {
+        // The hub publishes every scan (2 s) even when nothing changed; telling WPF "everything changed" each time made
+        // every tile re-read all its bindings and rebuild its battery rows, which was most of the app's garbage.
+        bool differs = s.DiffersFrom(_s);
         _s = s;
+        if (!differs) return;
+        _parts = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // everything may have changed
     }
 
@@ -62,8 +67,10 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
 
     /// <summary>Several batteries (earbuds: left, right, case): the tile shows them in a row instead of one level.</summary>
     public bool HasParts => _s.Parts is { Count: > 0 };
+    // Kept until the snapshot changes: a new list makes the tile's battery rows rebuild their templates.
     public IReadOnlyList<PartViewModel> Parts =>
-        _s.Parts?.Select(p => new PartViewModel(p.Label, p.Percent, p.Charging, p.Live && IsOnline)).ToList() ?? [];
+        _parts ??= _s.Parts?.Select(p => new PartViewModel(p.Label, p.Percent, p.Charging, p.Live && IsOnline)).ToList() ?? [];
+    private IReadOnlyList<PartViewModel>? _parts;
     /// <summary>The single battery number and icon; hidden for multi-battery devices and monitors.</summary>
     public bool ShowSingleBattery => !HasParts && !IsMonitor;
 
@@ -130,7 +137,11 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         string? error;
         try { error = await SetMonitorMute(Id, muted); }
         catch (Exception) { error = "failed"; }
-        if (error is not null) { _muteWanted = null; RaiseMute(); }
+        if (error is not null) { _muteWanted = null; RaiseMute(); return; }
+        // When the hold ends the monitor's own reading shows again; tiles only refresh on changes, so ask for it.
+        var left = _muteHoldUntil - DateTime.UtcNow;
+        if (left > TimeSpan.Zero) await Task.Delay(left + TimeSpan.FromMilliseconds(50));
+        RaiseMute();
     }
 
     private void RaiseMute() { Raise(nameof(IsMuted)); Raise(nameof(VolumeGlyph)); Raise(nameof(MuteTooltip)); }
@@ -369,6 +380,9 @@ internal sealed class LevelSender(Func<int, Task<string?>> send, Action changed)
             if (_wanted != v) { t.Start(); return; } // dragged further meanwhile
             _wanted = null;
             changed();
+            // After the hold the monitor's reading shows again; tiles only refresh on changes, so ask once more.
+            await Task.Delay(HoldAfterSend + TimeSpan.FromMilliseconds(50));
+            if (_wanted is null && !_sending) changed();
         };
         return t;
     }

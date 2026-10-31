@@ -33,11 +33,17 @@ internal static class CoreAudio
                 for (uint i = 0; i < count; i++)
                 {
                     if (list.Item(i, out var device) != 0) continue;
-                    if (device.GetId(out var id) != 0 || device.OpenPropertyStore(0, out var props) != 0) continue;
-                    result.Add(new AudioEndpoint(id, flow == Render, ReadString(props, FriendlyAdapterName) ?? "",
-                        ReadGuid(props, ContainerId) ?? Guid.Empty, ReadString(props, EnumeratorName) ?? ""));
-                    Marshal.ReleaseComObject(props);
-                    Marshal.ReleaseComObject(device);
+                    try
+                    {
+                        if (device.GetId(out var id) != 0 || device.OpenPropertyStore(0, out var props) != 0) continue;
+                        try
+                        {
+                            result.Add(new AudioEndpoint(id, flow == Render, ReadString(props, FriendlyAdapterName) ?? "",
+                                ReadGuid(props, ContainerId) ?? Guid.Empty, ReadString(props, EnumeratorName) ?? ""));
+                        }
+                        finally { Marshal.ReleaseComObject(props); }
+                    }
+                    finally { Marshal.ReleaseComObject(device); }
                 }
                 Marshal.ReleaseComObject(list);
             }
