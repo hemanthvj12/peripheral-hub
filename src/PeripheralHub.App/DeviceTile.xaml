@@ -1,0 +1,529 @@
+<UserControl x:Class="PeripheralHub.App.DeviceTile"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:PeripheralHub.App"
+             mc:Ignorable="d" d:DataContext="{d:DesignInstance local:DeviceViewModel}"
+             FontFamily="{StaticResource UiFont}" ToolTip="{Binding Tooltip}">
+    <UserControl.Resources>
+        <!-- Device not reachable: dim the content (the last known battery is still shown). -->
+        <Style x:Key="DimWhenAway" TargetType="FrameworkElement">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                    <Setter Property="Opacity" Value="0.55"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Battery %: a live reading in bold; "was 82%" (level before charging) smaller and grey. -->
+        <Style x:Key="BatteryTextFull" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBatteryTextDim}" Value="True">
+                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="FontWeight" Value="Normal"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="BatteryTextCompact" TargetType="TextBlock" BasedOn="{StaticResource BatteryTextFull}">
+            <Setter Property="FontSize" Value="12"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsBatteryTextDim}" Value="True">
+                    <Setter Property="FontSize" Value="10.5"/>
+                    <Setter Property="FontWeight" Value="Normal"/>
+                    <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Multi-battery devices (earbuds), owner's "option B": one row per part on the right, "L 80% [battery]",
+             the same battery icon and colours as single devices (bolt while charging). Parts missing from the latest
+             reading show their last known level in grey. -->
+        <Style x:Key="PartRow" TargetType="StackPanel">
+            <Setter Property="Orientation" Value="Horizontal"/>
+            <Setter Property="HorizontalAlignment" Value="Right"/>
+            <Setter Property="ToolTip" Value="{Binding Tooltip}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Live}" Value="False">
+                    <Setter Property="Opacity" Value="0.6"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <DataTemplate x:Key="PartRowFull" DataType="{x:Type local:PartViewModel}">
+            <StackPanel Style="{StaticResource PartRow}" Margin="0,1">
+                <TextBlock Text="{Binding ShortLabel}" FontSize="11" Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <TextBlock Text="{Binding Value}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                           MinWidth="31" TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0"/>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource BatteryIcon}" Width="21" Height="11"
+                                  VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+        <DataTemplate x:Key="PartRowCompact" DataType="{x:Type local:PartViewModel}">
+            <StackPanel Style="{StaticResource PartRow}">
+                <TextBlock Text="{Binding ShortLabel}" FontSize="9.5" Foreground="{DynamicResource TextSecondary}"
+                           VerticalAlignment="Center" Margin="0,0,3,0"/>
+                <TextBlock Text="{Binding Value}" FontSize="10.5" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                           MinWidth="27" TextAlignment="Right" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource BatteryIcon}" Width="17" Height="9"
+                                  VerticalAlignment="Center"/>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Noise control (Abyss X-style, owner 2026-10-28): a pill of three icon buttons, the selected one filled;
+             Tag carries "is this one selected". -->
+        <Style x:Key="NoiseModeButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="14">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                </Trigger>
+                <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource TextPrimary}"/>
+                    <Setter Property="Foreground" Value="{DynamicResource CardBg}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+        <!-- Strength: a dot on a track; the selected one is a bigger filled circle. -->
+        <Style x:Key="NoiseStrengthButton" TargetType="Button">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="Transparent" Height="14">
+                            <Ellipse x:Name="Dot" Width="4" Height="4" Fill="{DynamicResource TextSecondary}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <!-- Selected: a bigger filled circle (bound directly; Tag holds a bool). -->
+                            <Ellipse Width="11" Height="11" Fill="{DynamicResource TextPrimary}"
+                                     HorizontalAlignment="Center" VerticalAlignment="Center"
+                                     Visibility="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource BoolToVis}}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource TextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <!-- A full-width pill in the drawer ("Open Abyss X"). -->
+        <Style x:Key="DrawerButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Background" Value="{DynamicResource DrawerTrack}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Height" Value="26"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="13">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <Style x:Key="NoiseLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="9.5"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
+
+        <!-- Monitor brightness/volume: a thin track filled up to the value, with a round thumb (same colours as the
+             noise pill: the filled part in TextPrimary on the drawer's track). -->
+        <Style x:Key="SliderPart" TargetType="RepeatButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="IsTabStop" Value="False"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RepeatButton">
+                        <Grid Background="Transparent">
+                            <Border Height="4" CornerRadius="2" Background="{TemplateBinding Background}" VerticalAlignment="Center"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="LevelSlider" TargetType="Slider">
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+            <Setter Property="SmallChange" Value="5"/>
+            <Setter Property="LargeChange" Value="10"/>
+            <Setter Property="IsMoveToPointEnabled" Value="True"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
+            <Setter Property="TickFrequency" Value="1"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid Height="18" Background="Transparent">
+                            <Border Height="4" CornerRadius="2" Background="{DynamicResource DrawerTrack}" VerticalAlignment="Center"/>
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource SliderPart}" Background="{DynamicResource TextPrimary}"
+                                                  Command="Slider.DecreaseLarge"/>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Style="{StaticResource SliderPart}" Background="Transparent" Command="Slider.IncreaseLarge"/>
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb Focusable="False">
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="12" Height="12" Fill="{DynamicResource TextPrimary}"/>
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Product picture, or the generic icon when there is no artwork for the model. -->
+        <DataTemplate x:Key="DevicePicture">
+            <Grid>
+                <Image Source="{Binding Image}" Stretch="Uniform" RenderOptions.BitmapScalingMode="HighQuality"
+                       Visibility="{Binding HasImage, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Text="{Binding KindGlyph}" FontFamily="{StaticResource IconFont}" FontSize="22"
+                           Foreground="{DynamicResource TextPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasImage}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Border x:Name="Card" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorder}"
+            MouseEnter="OnCardEnter" MouseLeave="OnCardLeave" MouseLeftButtonUp="OnCardClick"
+            BorderThickness="1" CornerRadius="8">
+        <StackPanel>
+            <!-- ===== Full tile (panel) ===== -->
+            <Grid x:Name="FullLayout" Margin="10,10,6,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="60"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource DevicePicture}"
+                                  Width="54" Height="38" HorizontalAlignment="Left" VerticalAlignment="Center"
+                                  Style="{StaticResource DimWhenAway}"/>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,20,0" Style="{StaticResource DimWhenAway}">
+                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                        <Border Style="{StaticResource ConnectionBadge}">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                           VerticalAlignment="Center" Margin="0,1,4,0"/>
+                                <TextBlock Text="{Binding ConnectionText}" FontSize="11" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Several batteries (earbuds): one row per part. -->
+                <ItemsControl Grid.Column="2" ItemsSource="{Binding Parts}" ItemTemplate="{StaticResource PartRowFull}"
+                              VerticalAlignment="Center" Focusable="False" Style="{StaticResource DimWhenAway}"
+                              Visibility="{Binding HasParts, Converter={StaticResource BoolToVis}}"/>
+
+                <!-- Battery: "75%" + Android-style battery icon (coloured by level, bolt while charging). -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Style="{StaticResource DimWhenAway}"
+                            Visibility="{Binding ShowSingleBattery, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource IconFont}" FontSize="12"
+                               Foreground="{DynamicResource Bad}" VerticalAlignment="Center" Margin="0,1,4,0"
+                               Visibility="{Binding HasError, Converter={StaticResource BoolToVis}}"/>
+                    <TextBlock Text="{Binding BatteryText}" Style="{StaticResource BatteryTextFull}" MinWidth="38" TextAlignment="Right"
+                               VerticalAlignment="Center" Margin="0,0,6,0"/>
+                    <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource BatteryIcon}" Width="27" Height="14"
+                                      VerticalAlignment="Center"
+                                      Visibility="{Binding ShowBatteryIcon, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+
+                <!-- Monitor: resolution and refresh rate where the battery goes. -->
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource DimWhenAway}"
+                            Visibility="{Binding HasMonitorMode, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding ResolutionText}" FontSize="13" FontWeight="SemiBold" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource TextPrimary}"/>
+                    <TextBlock Text="{Binding RefreshText}" FontSize="11" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Margin="6,0,0,0" VerticalAlignment="Center">
+                    <Button Style="{StaticResource IconButton}"
+                            Content="{Binding PinGlyph}" ToolTip="{Binding PinTooltip}" Click="OnPinClick"
+                            Visibility="{Binding CanPin, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- ===== Compact tile (widget) ===== -->
+            <Grid x:Name="CompactLayout" Margin="8,6,10,6" Visibility="Collapsed" Style="{StaticResource DimWhenAway}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="40"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource DevicePicture}"
+                                  Width="36" Height="26" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,16,0">
+                    <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <Border Style="{StaticResource ConnectionBadge}" Padding="4,0,5,0" Margin="0,0,5,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="8.5"
+                                           VerticalAlignment="Center" Margin="0,1,3,0"/>
+                                <TextBlock Text="{Binding ConnectionText}" FontSize="9.5" FontWeight="SemiBold"/>
+                            </StackPanel>
+                        </Border>
+                        <TextBlock Text="{Binding StatusText}" FontSize="10.5" Foreground="{DynamicResource TextSecondary}"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+                <ItemsControl Grid.Column="2" ItemsSource="{Binding Parts}" ItemTemplate="{StaticResource PartRowCompact}"
+                              VerticalAlignment="Center" Focusable="False"
+                              Visibility="{Binding HasParts, Converter={StaticResource BoolToVis}}"/>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                            Visibility="{Binding ShowSingleBattery, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding BatteryText}" Style="{StaticResource BatteryTextCompact}" MinWidth="32" TextAlignment="Right"
+                               VerticalAlignment="Center" Margin="0,0,5,0"/>
+                    <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource BatteryIcon}" Width="21" Height="11"
+                                      VerticalAlignment="Center"
+                                      Visibility="{Binding ShowBatteryIcon, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" VerticalAlignment="Center"
+                            Visibility="{Binding HasMonitorMode, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding ResolutionText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource TextPrimary}"/>
+                    <TextBlock Text="{Binding RefreshText}" FontSize="9.5" HorizontalAlignment="Right"
+                               Foreground="{DynamicResource TextSecondary}"/>
+                </StackPanel>
+            </Grid>
+
+            <!-- ===== Drawer: extra controls under the tile, both layouts (owner, 2026-10-28): opened by a click on
+                 the tile or the chevron, slides open (DeviceTile.SyncDrawer), slightly lighter than the tile. ===== -->
+            <Border x:Name="Drawer" Background="{DynamicResource DrawerBg}" CornerRadius="6" Padding="8" Margin="8,0,8,8"
+                    Visibility="Collapsed" MouseLeftButtonDown="OnDrawerMouseDown" MouseLeftButtonUp="OnDrawerMouseUp">
+            <StackPanel>
+            <StackPanel x:Name="NoiseRow" ToolTip="{Binding NoiseTooltip}"
+                        Visibility="{Binding HasNoiseControl, Converter={StaticResource BoolToVis}}">
+                <!-- The mode controls dim while they can't be used (Abyss X open, change in progress); the
+                     "Open Abyss X" button below stays usable. -->
+                <StackPanel IsEnabled="{Binding CanChangeNoise}">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <Border Background="{DynamicResource DrawerTrack}" CornerRadius="16" Padding="3">
+                    <UniformGrid Columns="3">
+                        <Button Style="{StaticResource NoiseModeButton}" Tag="{Binding IsNoiseCancellation}"
+                                CommandParameter="Cancellation" Click="OnNoiseClick">
+                            <Grid Width="15" Height="15">
+                                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4"/>
+                                <Ellipse Width="3.5" Height="3.5" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource NoiseModeButton}" Tag="{Binding IsNoiseTransparency}"
+                                CommandParameter="Transparency" Click="OnNoiseClick">
+                            <Grid Width="15" Height="15">
+                                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4"
+                                         StrokeDashArray="1 1.6"/>
+                                <Ellipse Width="3.5" Height="3.5" Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Grid>
+                        </Button>
+                        <Button Style="{StaticResource NoiseModeButton}" Tag="{Binding IsNoiseOff}"
+                                CommandParameter="Off" Click="OnNoiseClick">
+                            <Grid Width="15" Height="15">
+                                <Ellipse Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" StrokeThickness="1.4"/>
+                                <Line X1="2.5" Y1="2.5" X2="12.5" Y2="12.5" StrokeThickness="1.4"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"/>
+                            </Grid>
+                        </Button>
+                    </UniformGrid>
+                </Border>
+                <UniformGrid Columns="3" Margin="0,3,0,0">
+                    <TextBlock Text="Noise cancelling" Style="{StaticResource NoiseLabel}"/>
+                    <TextBlock Text="Transparency" Style="{StaticResource NoiseLabel}"/>
+                    <TextBlock Text="Off" Style="{StaticResource NoiseLabel}"/>
+                </UniformGrid>
+
+                <!-- Strength, while noise cancelling is on. -->
+                <StackPanel Margin="0,6,0,0" Visibility="{Binding IsNoiseCancellation, Converter={StaticResource BoolToVis}}">
+                    <Border Background="{DynamicResource DrawerTrack}" CornerRadius="8" Padding="6,2" Margin="16,0">
+                        <UniformGrid Columns="4">
+                            <Button Style="{StaticResource NoiseStrengthButton}" Tag="{Binding IsStrengthLow}" CommandParameter="Low" Click="OnNoiseClick"/>
+                            <Button Style="{StaticResource NoiseStrengthButton}" Tag="{Binding IsStrengthMid}" CommandParameter="Mid" Click="OnNoiseClick"/>
+                            <Button Style="{StaticResource NoiseStrengthButton}" Tag="{Binding IsStrengthHigh}" CommandParameter="High" Click="OnNoiseClick"/>
+                            <Button Style="{StaticResource NoiseStrengthButton}" Tag="{Binding IsStrengthAdaptive}" CommandParameter="Adaptive" Click="OnNoiseClick"/>
+                        </UniformGrid>
+                    </Border>
+                    <UniformGrid Columns="4" Margin="22,2,22,0">
+                        <TextBlock Text="Low" Style="{StaticResource NoiseLabel}"/>
+                        <TextBlock Text="Mid" Style="{StaticResource NoiseLabel}"/>
+                        <TextBlock Text="High" Style="{StaticResource NoiseLabel}"/>
+                        <TextBlock Text="Adaptive" Style="{StaticResource NoiseLabel}"/>
+                    </UniformGrid>
+                </StackPanel>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Monitor settings over DDC/CI: drag, click or scroll a slider. -->
+            <Grid x:Name="MonitorRows" Visibility="{Binding HasMonitorControls, Converter={StaticResource BoolToVis}}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="22"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="34"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="&#xE706;" FontFamily="{StaticResource IconFont}" FontSize="13" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondary}" ToolTip="Brightness"
+                           Visibility="{Binding HasBrightness, Converter={StaticResource BoolToVis}}"/>
+                <Slider Grid.Column="1" Style="{StaticResource LevelSlider}" ToolTip="Brightness"
+                        Value="{Binding BrightnessPercent, Mode=TwoWay}" PreviewMouseWheel="OnSliderWheel"
+                        Visibility="{Binding HasBrightness, Converter={StaticResource BoolToVis}}"/>
+                <TextBlock Grid.Column="2" Text="{Binding BrightnessPercent}" FontSize="11" TextAlignment="Right" VerticalAlignment="Center"
+                           Foreground="{DynamicResource TextSecondary}"
+                           Visibility="{Binding HasBrightness, Converter={StaticResource BoolToVis}}"/>
+
+                <!-- The speaker icon mutes/unmutes the monitor's speakers (when it says whether it's muted). -->
+                <Button Grid.Row="1" Click="OnMuteClick" IsEnabled="{Binding CanMute}" Margin="-3,4,0,0"
+                        HorizontalAlignment="Left" ToolTip="{Binding MuteTooltip}" ToolTipService.ShowOnDisabled="True"
+                        Visibility="{Binding HasVolume, Converter={StaticResource BoolToVis}}">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="Transparent" CornerRadius="4" Width="20" Height="20">
+                                <TextBlock Text="{Binding VolumeGlyph}" FontFamily="{StaticResource IconFont}" FontSize="13"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{TemplateBinding Foreground}"/>
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="{DynamicResource DrawerTrack}"/>
+                                    <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                            <Setter Property="Focusable" Value="False"/>
+                            <Setter Property="Cursor" Value="Hand"/>
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Cursor" Value="{x:Null}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Slider Grid.Row="1" Grid.Column="1" ToolTip="Speaker volume" Margin="0,4,0,0"
+                        Value="{Binding VolumePercent, Mode=TwoWay}" PreviewMouseWheel="OnSliderWheel"
+                        Visibility="{Binding HasVolume, Converter={StaticResource BoolToVis}}">
+                    <Slider.Style>
+                        <Style TargetType="Slider" BasedOn="{StaticResource LevelSlider}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsMuted}" Value="True">
+                                    <Setter Property="Opacity" Value="0.4"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Slider.Style>
+                </Slider>
+                <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding VolumePercent}" FontSize="11" TextAlignment="Right"
+                           VerticalAlignment="Center" Foreground="{DynamicResource TextSecondary}" Margin="0,4,0,0"
+                           Visibility="{Binding HasVolume, Converter={StaticResource BoolToVis}}"/>
+            </Grid>
+
+            <!-- Sound devices (USB headsets): make it Windows' default output and mic; shows a check once it is. -->
+            <Button Click="OnSetDefaultSoundClick" IsEnabled="{Binding CanSetDefaultSound}"
+                    ToolTip="{Binding SoundTooltip}" ToolTipService.ShowOnDisabled="True"
+                    Visibility="{Binding HasSound, Converter={StaticResource BoolToVis}}">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource DrawerButton}">
+                        <Style.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Cursor" Value="{x:Null}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding SoundButtonGlyph}" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                    <TextBlock Text="{Binding SoundButtonText}" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- The maker's app (Abyss X, Kreo, AULA) opens from here. -->
+            <Button Style="{StaticResource DrawerButton}" Click="OnOpenVendorClick" Margin="0,8,0,0"
+                    Visibility="{Binding HasVendorApp, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                    <TextBlock Text="{Binding OpenVendorText}" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- The lights belong to LightHub (the owner's lighting app); this pops up its menu. -->
+            <Button Style="{StaticResource DrawerButton}" Click="OnOpenLightHubClick" Margin="0,8,0,0"
+                    Visibility="{Binding HasLightHub, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xEA80;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                    <TextBlock Text="Open LightHub" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+            </StackPanel>
+            </Border>
+        </StackPanel>
+    </Border>
+</UserControl>

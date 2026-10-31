@@ -1,0 +1,17 @@
+<Project>
+  <!-- Shared by every plugin project. Each project sets PluginId (its manifest id). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- One self-contained dll per plugin: no deps.json, symbols embedded. -->
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType>embedded</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The host provides the SDK at runtime, so plugins must not ship their own copy. -->
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\src\PeripheralHub.Sdk\PeripheralHub.Sdk.csproj" Private="false" />
+    <InternalsVisibleTo Include="PeripheralHub.Tests" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+{
+  "id": "monitors",
+  "name": "Monitors",
+  "version": "1.0.0",
+  "sdkVersion": 2,
+  "assembly": "PeripheralHub.Plugins.Monitors.dll",
+  // Monitors aren't HID or Bluetooth devices, so the hub's scan can't see them to turn the plugin on; it starts with
+  // the app and reads Windows' display configuration (one cheap call every scan) plus DDC/CI on a worker thread.
+  "alwaysOn": true
+}

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>sony-controllers</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.SonyControllers</RootNamespace>
+  </PropertyGroup>
+
+</Project>

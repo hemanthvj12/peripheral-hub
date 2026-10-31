@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>monitors</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.Monitors</RootNamespace>
+  </PropertyGroup>
+
+</Project>

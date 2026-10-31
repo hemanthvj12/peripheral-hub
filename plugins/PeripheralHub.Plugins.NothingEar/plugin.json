@@ -1,0 +1,29 @@
+{
+  "id": "nothing-ear",
+  "name": "Nothing earbuds",
+  "version": "1.1.0",
+  "sdkVersion": 1,
+  "assembly": "PeripheralHub.Plugins.NothingEar.dll",
+  "devices": [
+    // Nothing's Bluetooth vendor ID. The driver only reads devices that offer the "NT LINK" service.
+    { "connection": "bluetooth", "vendorId": "02B0" }
+  ],
+  "vendorApps": [
+    {
+      "model": "nothing-ear-2",
+      "displayName": "Abyss X",
+      "installedName": "Abyss X",
+      "exePaths": [ "Abyss X.exe" ],
+      "processName": "Abyss X",
+      "defaultInstallFolder": "C:/Program Files/Abyss X"
+    },
+    {
+      "model": "nothing-ear",
+      "displayName": "Abyss X",
+      "installedName": "Abyss X",
+      "exePaths": [ "Abyss X.exe" ],
+      "processName": "Abyss X",
+      "defaultInstallFolder": "C:/Program Files/Abyss X"
+    }
+  ]
+}

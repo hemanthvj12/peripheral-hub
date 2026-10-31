@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>aula-f75</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.AulaF75</RootNamespace>
+  </PropertyGroup>
+
+</Project>

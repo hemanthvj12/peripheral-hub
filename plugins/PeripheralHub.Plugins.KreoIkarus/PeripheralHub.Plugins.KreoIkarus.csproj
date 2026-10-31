@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>kreo-ikarus</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.KreoIkarus</RootNamespace>
+  </PropertyGroup>
+
+</Project>

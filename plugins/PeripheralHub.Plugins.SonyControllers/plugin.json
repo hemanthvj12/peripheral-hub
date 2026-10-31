@@ -1,0 +1,16 @@
+{
+  "id": "sony-controllers",
+  "name": "PlayStation controllers",
+  "version": "1.3.0",
+  "sdkVersion": 1,
+  "assembly": "PeripheralHub.Plugins.SonyControllers.dll",
+  "devices": [
+    { "connection": "usb", "vendorId": "054C", "productId": "0CE6" },
+    { "connection": "usb", "vendorId": "054C", "productId": "0DF2" },
+    { "connection": "usb", "vendorId": "054C", "productId": "05C4" },
+    { "connection": "usb", "vendorId": "054C", "productId": "09CC" },
+    { "connection": "usb", "vendorId": "054C", "productId": "0BA0" },
+    // Every Sony Bluetooth device: their battery comes from controller reports, not Windows' Bluetooth battery.
+    { "connection": "bluetooth", "vendorId": "054C" }
+  ]
+}

@@ -1,0 +1,17 @@
+<Project>
+  <!--
+    After each build, stage the plugin as the folder the app loads: artifacts\plugins\<Configuration>\<PluginId>\
+    with the dll and plugin.json. (Plugins carry no pictures: the app draws every device itself, owner 2026-10-29.)
+    The app project copies the staged folders into its output and publish folders.
+  -->
+  <Target Name="StagePlugin" AfterTargets="Build" Condition="'$(PluginId)' != ''">
+    <PropertyGroup>
+      <PluginStageDir>$(MSBuildThisFileDirectory)..\artifacts\plugins\$(Configuration)\$(PluginId)\</PluginStageDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <PluginFile Include="$(TargetPath);$(MSBuildProjectDirectory)\plugin.json" />
+    </ItemGroup>
+    <RemoveDir Directories="$(PluginStageDir)" />
+    <Copy SourceFiles="@(PluginFile)" DestinationFolder="$(PluginStageDir)" />
+  </Target>
+</Project>

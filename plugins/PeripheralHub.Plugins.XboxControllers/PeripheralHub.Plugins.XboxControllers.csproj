@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>xbox-controllers</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.XboxControllers</RootNamespace>
+  </PropertyGroup>
+
+</Project>

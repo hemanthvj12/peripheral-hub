@@ -1,0 +1,47 @@
+<Window x:Class="PeripheralHub.App.FlyoutWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PeripheralHub.App"
+        Title="Peripherals" Width="335" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
+        Background="{DynamicResource WindowBg}" FontFamily="{StaticResource UiFont}"
+        ShowActivated="True" Deactivated="OnDeactivated" KeyDown="OnKeyDown">
+    <Grid x:Name="Root" Margin="12,12,12,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Margin="4,0,0,10">
+            <TextBlock Text="Peripherals" FontSize="14" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimary}"
+                       VerticalAlignment="Center"/>
+            <Button x:Name="MoreButton" HorizontalAlignment="Right" Style="{StaticResource IconButton}" Content="&#xE712;"
+                    ToolTip="More" Click="OnMenuClick"/>
+            <!-- The app menu as a pop-up of the panel, so the panel keeps focus: a click anywhere in it just closes the
+                 menu (owner, 2026-10-28; a separate menu window closed the panel). Always beside the panel, on its
+                 left and top-aligned with it, so it never covers the panel whatever its height (Margin 12 = shadow room). -->
+            <Popup x:Name="MenuPopup" PlacementTarget="{Binding ElementName=Root}" Placement="Left" HorizontalOffset="-8" VerticalOffset="-24"
+                   StaysOpen="False" AllowsTransparency="True" PopupAnimation="Fade" Closed="OnMenuPopupClosed">
+                <Border Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1"
+                        CornerRadius="8" Margin="12">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.35"/>
+                    </Border.Effect>
+                    <local:AppMenuView x:Name="MenuView"/>
+                </Border>
+            </Popup>
+        </Grid>
+
+        <ItemsControl Grid.Row="1" ItemsSource="{Binding Devices}">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <local:DeviceTile Margin="0,0,0,6"/>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <TextBlock Grid.Row="1" x:Name="EmptyText" Margin="4,8" FontSize="12" TextWrapping="Wrap" MaxWidth="260"
+                   Foreground="{DynamicResource TextSecondary}" Visibility="Collapsed"
+                   Text="No supported devices found yet. Plug in a receiver, connect a cable, or turn on a Bluetooth device."/>
+    </Grid>
+</Window>

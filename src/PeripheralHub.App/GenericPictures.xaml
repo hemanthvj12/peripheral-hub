@@ -1,0 +1,206 @@
+<!--
+    Pictures for devices without their own product image (owner's choice 2026-10-29, "Silver + brand"): silver
+    bodies like the real product renders, with the app's purple-to-blue on the details (screen, wheel, ear pads,
+    buttons). Drawn on a 120x84 canvas (the tiles' picture ratio); a transparent frame keeps every picture's framing
+    the same. The Silver icon pack's pictures for everything but controllers (DeviceArt.For looks them up by key;
+    controllers are the pack's line art filled the same way, DeviceArt.Silver; Generic.Controller is unused).
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <LinearGradientBrush x:Key="Silver" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#F4F6FA"/>
+        <GradientStop Offset="1" Color="#A9B0BD"/>
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="Brand" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#9B6BFF"/>
+        <GradientStop Offset="1" Color="#3F8CFF"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Detail" Color="#5B6170"/>
+    <SolidColorBrush x:Key="Dark" Color="#1D2230"/>
+    <SolidColorBrush x:Key="Keys" Color="#C9CED8"/>
+    <RectangleGeometry x:Key="Frame" Rect="0,0,120,84"/>
+
+    <DrawingImage x:Key="Generic.Monitor">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="12,6,96,58" RadiusX="6" RadiusY="6"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}"><GeometryDrawing.Geometry><RectangleGeometry Rect="17,11,86,46" RadiusX="2.5" RadiusY="2.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Detail}"><GeometryDrawing.Geometry><RectangleGeometry Rect="54,64,12,9"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="36,72,48,6" RadiusX="3" RadiusY="3"/></GeometryDrawing.Geometry></GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Keyboard (owner, 2026-10-29: clearer keys): silver frame, dark graphite deck, bright keycaps, and W A S D + space
+         in the brand gradient. Letters in three rows (Q, A and Z rows), then a modifier/space row. -->
+    <LinearGradientBrush x:Key="KeyCap" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Offset="0" Color="#FFFFFF"/>
+        <GradientStop Offset="1" Color="#CDD3DD"/>
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="Deck" Color="#2E323B"/>
+    <DrawingImage x:Key="Generic.Keyboard">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="6,22,108,46" RadiusX="7" RadiusY="7"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Deck}"><GeometryDrawing.Geometry><RectangleGeometry Rect="10,26,100,38" RadiusX="4.5" RadiusY="4.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource KeyCap}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="12.6,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="21.5,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="39.3,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="48.2,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="57.1,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="66.0,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="74.9,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="83.8,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="92.7,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="101.6,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="12.6,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="48.2,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="57.1,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="66.0,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="74.9,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="83.8,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="92.7,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="101.6,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="12.6,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="21.5,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="30.4,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="39.3,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="48.2,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="57.1,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="66.0,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="74.9,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="83.8,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="92.7,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="101.6,46.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="12.6,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="21.5,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="30.4,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="81.5,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="90.4,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="99.3,55.5,6.8,6" RadiusX="1.3" RadiusY="1.3"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="30.4,29.0,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="21.5,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="30.4,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="39.3,37.5,6.8,6.6" RadiusX="1.3" RadiusY="1.3"/>
+                            <RectangleGeometry Rect="39.3,55.5,40.4,6" RadiusX="1.3" RadiusY="1.3"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="Generic.Mouse">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="38,4,44,76" RadiusX="22" RadiusY="22"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Geometry="M60,5 V34 M39,34 H81"><GeometryDrawing.Pen><Pen Brush="{StaticResource Detail}" Thickness="2"/></GeometryDrawing.Pen></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}"><GeometryDrawing.Geometry><RectangleGeometry Rect="56.5,13,7,13" RadiusX="3.5" RadiusY="3.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="Generic.Audio">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Geometry="M28,54 V44 A32,32 0 0 1 92,44 V54">
+                    <GeometryDrawing.Pen><Pen Brush="{StaticResource Silver}" Thickness="7" StartLineCap="Round" EndLineCap="Round"/></GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="17,44,21,32" RadiusX="9" RadiusY="9"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Silver}"><GeometryDrawing.Geometry><RectangleGeometry Rect="82,44,21,32" RadiusX="9" RadiusY="9"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}"><GeometryDrawing.Geometry><RectangleGeometry Rect="32,50,5,20" RadiusX="2.5" RadiusY="2.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}"><GeometryDrawing.Geometry><RectangleGeometry Rect="83,50,5,20" RadiusX="2.5" RadiusY="2.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+                <!-- Boom mic: it's a headset (owner, 2026-10-29: headsets and earphones look different). -->
+                <GeometryDrawing Geometry="M27,74 Q30,81 46,80">
+                    <GeometryDrawing.Pen><Pen Brush="#C4C9D2" Thickness="3.5" StartLineCap="Round" EndLineCap="Round"/></GeometryDrawing.Pen>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}"><GeometryDrawing.Geometry><EllipseGeometry Center="49,79.5" RadiusX="4.5" RadiusY="3.5"/></GeometryDrawing.Geometry></GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <!-- Earbuds (DevicePictures.IsEarbuds): two stem buds with brand-coloured ear tips and mics. -->
+    <DrawingImage x:Key="Generic.Earbuds">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Brush="{StaticResource Silver}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup FillRule="Nonzero">
+                            <RectangleGeometry Rect="33,32,10,44" RadiusX="5" RadiusY="5"/>
+                            <EllipseGeometry Center="42,28" RadiusX="15" RadiusY="13"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Silver}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup FillRule="Nonzero">
+                            <RectangleGeometry Rect="77,32,10,44" RadiusX="5" RadiusY="5"/>
+                            <EllipseGeometry Center="78,28" RadiusX="15" RadiusY="13"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="53,24" RadiusX="5.5" RadiusY="5"/>
+                            <EllipseGeometry Center="67,24" RadiusX="5.5" RadiusY="5"/>
+                            <RectangleGeometry Rect="35,69,6,4" RadiusX="2" RadiusY="2"/>
+                            <RectangleGeometry Rect="79,69,6,4" RadiusX="2" RadiusY="2"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="Generic.Controller">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="Transparent" Geometry="{StaticResource Frame}"/>
+                <GeometryDrawing Brush="{StaticResource Silver}"
+                                 Geometry="M32,20 H88 C101,20 107,29 110,41 L115,62 C117,72 110,79 103,77 C97,76 93,70 89,64 L86,59 H34 L31,64 C27,70 23,76 17,77 C10,79 3,72 5,62 L10,41 C13,29 19,20 32,20 Z"/>
+                <GeometryDrawing Brush="{StaticResource Detail}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <RectangleGeometry Rect="27,33,15,5" RadiusX="1.5" RadiusY="1.5"/>
+                            <RectangleGeometry Rect="32,28,5,15" RadiusX="1.5" RadiusY="1.5"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Brand}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="86,29" RadiusX="3.4" RadiusY="3.4"/>
+                            <EllipseGeometry Center="94,36" RadiusX="3.4" RadiusY="3.4"/>
+                            <EllipseGeometry Center="78,36" RadiusX="3.4" RadiusY="3.4"/>
+                            <EllipseGeometry Center="86,43" RadiusX="3.4" RadiusY="3.4"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing Brush="{StaticResource Dark}">
+                    <GeometryDrawing.Geometry>
+                        <GeometryGroup>
+                            <EllipseGeometry Center="49,50" RadiusX="7" RadiusY="7"/>
+                            <EllipseGeometry Center="71,50" RadiusX="7" RadiusY="7"/>
+                        </GeometryGroup>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+</ResourceDictionary>

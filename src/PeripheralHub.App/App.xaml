@@ -1,0 +1,175 @@
+<Application x:Class="PeripheralHub.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <!-- Colour brushes are (re)set at runtime by Theme.cs; these are light-mode defaults for the designer. -->
+        <SolidColorBrush x:Key="WindowBg" Color="#F3F3F3"/>
+        <SolidColorBrush x:Key="CardBg" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="CardHoverBg" Color="#F9F9F9"/>
+        <SolidColorBrush x:Key="CardBorder" Color="#E5E5E5"/>
+        <SolidColorBrush x:Key="TextPrimary" Color="#1B1B1B"/>
+        <SolidColorBrush x:Key="TextSecondary" Color="#616161"/>
+        <SolidColorBrush x:Key="Track" Color="#E0E0E0"/>
+        <SolidColorBrush x:Key="DrawerBg" Color="#F2F2F2"/>
+        <SolidColorBrush x:Key="DrawerTrack" Color="#E2E2E2"/>
+        <SolidColorBrush x:Key="Good" Color="#0F7B0F"/>
+        <SolidColorBrush x:Key="Bad" Color="#C42B1C"/>
+        <SolidColorBrush x:Key="Warn" Color="#9D5D00"/>
+        <SolidColorBrush x:Key="Accent" Color="#0067C0"/>
+        <SolidColorBrush x:Key="ButtonHoverBg" Color="#EAEAEA"/>
+        <SolidColorBrush x:Key="ConnBluetooth" Color="#0063B1"/>
+        <SolidColorBrush x:Key="ConnBluetoothBg" Color="#1F0063B1"/>
+        <SolidColorBrush x:Key="ConnDongle" Color="#6B2FD6"/>
+        <SolidColorBrush x:Key="ConnDongleBg" Color="#1F6B2FD6"/>
+        <SolidColorBrush x:Key="ConnWired" Color="#A35200"/>
+        <SolidColorBrush x:Key="ConnWiredBg" Color="#1FA35200"/>
+        <SolidColorBrush x:Key="ConnDisplay" Color="#00767A"/>
+        <SolidColorBrush x:Key="ConnDisplayBg" Color="#1F00767A"/>
+
+        <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
+        <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
+
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <!-- Every tooltip (owner, 2026-10-29: "tooltip ui can be modern"): a rounded card in the panel's colours, text
+             wrapped at a comfortable width, a short fade in. Plain strings wrap; a StackPanel can add a bold title line
+             (e.g. a title line). -->
+        <Style TargetType="ToolTip">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="HasDropShadow" Value="False"/>
+            <Setter Property="FontFamily" Value="{StaticResource UiFont}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="MaxWidth" Value="280"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToolTip">
+                        <Border x:Name="Card" Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorder}"
+                                BorderThickness="1" CornerRadius="8" Padding="10,7" Margin="0,0,6,6" Opacity="0">
+                            <Border.Effect>
+                                <DropShadowEffect BlurRadius="8" ShadowDepth="2" Opacity="0.25"/>
+                            </Border.Effect>
+                            <ContentPresenter>
+                                <ContentPresenter.Resources>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="TextWrapping" Value="Wrap"/>
+                                        <Setter Property="LineHeight" Value="17"/>
+                                    </Style>
+                                </ContentPresenter.Resources>
+                            </ContentPresenter>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <EventTrigger RoutedEvent="ToolTip.Opened">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetName="Card" Storyboard.TargetProperty="Opacity"
+                                                         From="0" To="1" Duration="0:0:0.12"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Flat icon button (pin, menu). -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="{StaticResource IconFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Width" Value="28"/>
+            <Setter Property="Height" Value="28"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ButtonHoverBg}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Coloured connection pill: Bluetooth blue, 2.4G purple, Wired amber. -->
+        <Style x:Key="ConnectionBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Padding" Value="5,1,6,1"/>
+            <Setter Property="Margin" Value="0,0,6,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Visibility" Value="{Binding HasConnection, Converter={StaticResource BoolToVis}}"/>
+            <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSecondary}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Connection}" Value="Bluetooth">
+                    <Setter Property="Background" Value="{DynamicResource ConnBluetoothBg}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource ConnBluetooth}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Connection}" Value="Dongle">
+                    <Setter Property="Background" Value="{DynamicResource ConnDongleBg}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource ConnDongle}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Connection}" Value="Wired">
+                    <Setter Property="Background" Value="{DynamicResource ConnWiredBg}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource ConnWired}"/>
+                </DataTrigger>
+                <!-- A monitor's video link (DisplayPort, HDMI, USB-C…): teal. -->
+                <DataTrigger Binding="{Binding IsDisplayLink}" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource ConnDisplayBg}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource ConnDisplay}"/>
+                </DataTrigger>
+                <!-- Virtual controller (game streaming, remapping): neutral grey. -->
+                <DataTrigger Binding="{Binding Connection}" Value="Virtual">
+                    <Setter Property="Background" Value="{DynamicResource Track}"/>
+                    <Setter Property="TextElement.Foreground" Value="{DynamicResource TextSecondary}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!--
+            Android-style battery: outline + terminal nub, fill coloured by level
+            (green >= 50 or charging, amber 21-49, red <= 20, grey when the device isn't online), bolt overlay while charging.
+            Drawn on a 24x12 canvas inside a Viewbox, so tiles can show it at any size.
+        -->
+        <DataTemplate x:Key="BatteryIcon">
+            <Viewbox Stretch="Uniform">
+                <Canvas Width="24" Height="12">
+                    <Border Canvas.Left="0.5" Canvas.Top="0.5" Width="21" Height="11" CornerRadius="2.5"
+                            BorderThickness="1.2" BorderBrush="{DynamicResource TextSecondary}"/>
+                    <Border Canvas.Left="22" Canvas.Top="3.5" Width="1.8" Height="5" CornerRadius="0,1,1,0"
+                            Background="{DynamicResource TextSecondary}"/>
+                    <Border Canvas.Left="2.5" Canvas.Top="2.5" Height="7" CornerRadius="1.2" Width="{Binding BatteryFillWidth}">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Setter Property="Background" Value="{DynamicResource Good}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding BatteryLevel}" Value="Medium">
+                                        <Setter Property="Background" Value="{DynamicResource Warn}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BatteryLevel}" Value="Low">
+                                        <Setter Property="Background" Value="{DynamicResource Bad}"/>
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding BatteryLevel}" Value="Away">
+                                        <Setter Property="Background" Value="{DynamicResource TextSecondary}"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                    </Border>
+                    <!-- Bolt with a dark outline so it reads on top of the green fill. -->
+                    <Path Canvas.Left="7" Canvas.Top="0.6" Data="M 5.2,0 L 0.6,6 L 3.6,6 L 2.6,10.8 L 7.4,4.4 L 4.3,4.4 Z"
+                          Fill="{DynamicResource TextPrimary}" Stroke="{DynamicResource CardBg}" StrokeThickness="0.9"
+                          StrokeLineJoin="Round" Visibility="{Binding ShowBolt, Converter={StaticResource BoolToVis}}"/>
+                </Canvas>
+            </Viewbox>
+        </DataTemplate>
+    </Application.Resources>
+</Application>

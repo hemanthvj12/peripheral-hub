@@ -1,0 +1,22 @@
+<Window x:Class="PeripheralHub.App.WidgetWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PeripheralHub.App"
+        Title="Peripherals widget" Width="230" SizeToContent="Height"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" ShowActivated="False"
+        Background="{DynamicResource CardBg}" FontFamily="{StaticResource UiFont}"
+        MouseLeftButtonDown="OnDrag">
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem x:Name="OnTopMenuItem" Header="Always on top" IsCheckable="True" Click="OnToggleOnTop"/>
+            <MenuItem Header="Hide widget" Click="OnHide"/>
+        </ContextMenu>
+    </Window.ContextMenu>
+    <ItemsControl ItemsSource="{Binding Devices}" Margin="2,4" ToolTip="Drag to move · right-click for options">
+        <ItemsControl.ItemTemplate>
+            <DataTemplate>
+                <local:DeviceTile Compact="True"/>
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+</Window>

@@ -1,0 +1,19 @@
+{
+  "id": "xbox-controllers",
+  "name": "Xbox controllers",
+  "version": "1.0.0",
+  "sdkVersion": 1,
+  "assembly": "PeripheralHub.Plugins.XboxControllers.dll",
+  // Xbox controllers on a cable or the Xbox Wireless Adapter aren't HID devices, so the hub's scan can't see them
+  // to turn the plugin on; it starts with the app and asks XInput (a few cheap calls every scan).
+  "alwaysOn": true,
+  "devices": [
+    // Xbox controllers over Bluetooth: claimed so the generic Bluetooth driver doesn't show them a second time.
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "02E0" },
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "02FD" },
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "0B05" },
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "0B13" },
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "0B20" },
+    { "connection": "bluetooth", "vendorId": "045E", "productId": "0B22" }
+  ]
+}

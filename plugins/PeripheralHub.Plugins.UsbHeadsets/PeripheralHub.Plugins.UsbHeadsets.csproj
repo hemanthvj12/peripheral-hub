@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>usb-headsets</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.UsbHeadsets</RootNamespace>
+  </PropertyGroup>
+
+</Project>

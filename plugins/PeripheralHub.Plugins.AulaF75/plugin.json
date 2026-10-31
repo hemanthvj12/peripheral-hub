@@ -1,0 +1,23 @@
+{
+  "id": "aula-f75",
+  "name": "AULA F75",
+  "version": "1.0.0",
+  "sdkVersion": 1,
+  "assembly": "PeripheralHub.Plugins.AulaF75.dll",
+  "devices": [
+    { "connection": "usb", "vendorId": "3554", "productId": "FA09" },
+    // Generic Sinowealth ID on the cable, so the manufacturer must match too.
+    { "connection": "usb", "vendorId": "258A", "productId": "010C", "manufacturer": "BY Tech" },
+    { "connection": "bluetooth", "vendorId": "3554", "productId": "FA07" }
+  ],
+  "vendorApps": [
+    {
+      "model": "aula-f75",
+      "displayName": "AULA app",
+      "installedName": "AULA F75",
+      "exePaths": [ "OemDrv.exe" ],
+      "processName": "OemDrv",
+      "defaultInstallFolder": "C:/Program Files (x86)/AULA/F75"
+    }
+  ]
+}

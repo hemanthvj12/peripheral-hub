@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PluginId>nothing-ear</PluginId>
+    <RootNamespace>PeripheralHub.Plugins.NothingEar</RootNamespace>
+  </PropertyGroup>
+
+</Project>

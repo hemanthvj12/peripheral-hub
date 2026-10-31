@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Throwaway probe for the add-device skill. Copy this folder to a short temp path (e.g. %TEMP%\phprobe), set
+       RepoRoot below (or pass -p:RepoRoot=...), then run it: "dotnet run", a double dash, then a command (see Program.cs).
+       Never add it to the solution. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RepoRoot Condition="'$(RepoRoot)' == ''">D:\Vibe Projects\PeripheralHub</RepoRoot>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="$(RepoRoot)\src\PeripheralHub.Core\PeripheralHub.Core.csproj" />
+  </ItemGroup>
+</Project>

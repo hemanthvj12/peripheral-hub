@@ -1,0 +1,101 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{E30F164B-ACD9-4796-9452-D439006AF557}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Core", "src\PeripheralHub.Core\PeripheralHub.Core.csproj", "{7D76DBA4-B147-4060-AA39-BAA198D76878}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{4ECE13BD-6628-4BAB-9408-859B3E0FFB00}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Tests", "tests\PeripheralHub.Tests\PeripheralHub.Tests.csproj", "{EE72A68A-B235-4766-8743-AD65C4306A6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.App", "src\PeripheralHub.App\PeripheralHub.App.csproj", "{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Sdk", "src\PeripheralHub.Sdk\PeripheralHub.Sdk.csproj", "{0CA14082-DDFE-456B-B126-D5710168EEEB}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "plugins", "plugins", "{A693BE47-1D32-4231-88C2-D59D38614BEB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.AulaF75", "plugins\PeripheralHub.Plugins.AulaF75\PeripheralHub.Plugins.AulaF75.csproj", "{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.KreoIkarus", "plugins\PeripheralHub.Plugins.KreoIkarus\PeripheralHub.Plugins.KreoIkarus.csproj", "{5855B190-CC4A-43CC-BA96-9DA24DC3E425}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.SonyControllers", "plugins\PeripheralHub.Plugins.SonyControllers\PeripheralHub.Plugins.SonyControllers.csproj", "{EE7A8C33-E231-48E7-BA53-DBE69D90A46E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.NothingEar", "plugins\PeripheralHub.Plugins.NothingEar\PeripheralHub.Plugins.NothingEar.csproj", "{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.XboxControllers", "plugins\PeripheralHub.Plugins.XboxControllers\PeripheralHub.Plugins.XboxControllers.csproj", "{54060E00-DCA4-499C-8B61-6A726E8BECF1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.Monitors", "plugins\PeripheralHub.Plugins.Monitors\PeripheralHub.Plugins.Monitors.csproj", "{DF6336C7-6E23-48D8-8789-8B90561D099D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeripheralHub.Plugins.UsbHeadsets", "plugins\PeripheralHub.Plugins.UsbHeadsets\PeripheralHub.Plugins.UsbHeadsets.csproj", "{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7D76DBA4-B147-4060-AA39-BAA198D76878}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D76DBA4-B147-4060-AA39-BAA198D76878}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D76DBA4-B147-4060-AA39-BAA198D76878}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D76DBA4-B147-4060-AA39-BAA198D76878}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE72A68A-B235-4766-8743-AD65C4306A6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE72A68A-B235-4766-8743-AD65C4306A6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE72A68A-B235-4766-8743-AD65C4306A6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE72A68A-B235-4766-8743-AD65C4306A6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CA14082-DDFE-456B-B126-D5710168EEEB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CA14082-DDFE-456B-B126-D5710168EEEB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CA14082-DDFE-456B-B126-D5710168EEEB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CA14082-DDFE-456B-B126-D5710168EEEB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5855B190-CC4A-43CC-BA96-9DA24DC3E425}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5855B190-CC4A-43CC-BA96-9DA24DC3E425}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5855B190-CC4A-43CC-BA96-9DA24DC3E425}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5855B190-CC4A-43CC-BA96-9DA24DC3E425}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE7A8C33-E231-48E7-BA53-DBE69D90A46E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE7A8C33-E231-48E7-BA53-DBE69D90A46E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE7A8C33-E231-48E7-BA53-DBE69D90A46E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE7A8C33-E231-48E7-BA53-DBE69D90A46E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54060E00-DCA4-499C-8B61-6A726E8BECF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54060E00-DCA4-499C-8B61-6A726E8BECF1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54060E00-DCA4-499C-8B61-6A726E8BECF1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54060E00-DCA4-499C-8B61-6A726E8BECF1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DF6336C7-6E23-48D8-8789-8B90561D099D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DF6336C7-6E23-48D8-8789-8B90561D099D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DF6336C7-6E23-48D8-8789-8B90561D099D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DF6336C7-6E23-48D8-8789-8B90561D099D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{7D76DBA4-B147-4060-AA39-BAA198D76878} = {E30F164B-ACD9-4796-9452-D439006AF557}
+		{EE72A68A-B235-4766-8743-AD65C4306A6B} = {4ECE13BD-6628-4BAB-9408-859B3E0FFB00}
+		{4B93B407-5A9C-4E4B-BDC9-2C7AE100DF73} = {E30F164B-ACD9-4796-9452-D439006AF557}
+		{0CA14082-DDFE-456B-B126-D5710168EEEB} = {E30F164B-ACD9-4796-9452-D439006AF557}
+		{2EB252BC-1AC6-4F7C-BBFE-A5FBC756BEE5} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{5855B190-CC4A-43CC-BA96-9DA24DC3E425} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{EE7A8C33-E231-48E7-BA53-DBE69D90A46E} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{74CBE060-7AAB-443D-A4D4-DCDEF3B0788F} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{54060E00-DCA4-499C-8B61-6A726E8BECF1} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{DF6336C7-6E23-48D8-8789-8B90561D099D} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+		{2079E558-1070-4FA2-8F5D-3A89F3E9CEE3} = {A693BE47-1D32-4231-88C2-D59D38614BEB}
+	EndGlobalSection
+EndGlobal

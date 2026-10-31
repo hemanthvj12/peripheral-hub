@@ -1,0 +1,11 @@
+<Window x:Class="PeripheralHub.App.AppMenuWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:PeripheralHub.App"
+        Title="PeripheralHub menu" SizeToContent="WidthAndHeight"
+        WindowStyle="None" ResizeMode="NoResize" ShowInTaskbar="False" Topmost="True"
+        Background="{DynamicResource CardBg}" BorderBrush="{DynamicResource CardBorder}" BorderThickness="1"
+        ShowActivated="True" Deactivated="OnDeactivated" KeyDown="OnKeyDown">
+    <!-- The menu as its own window, for the tray icon's right-click (the panel shows the same view in a pop-up). -->
+    <local:AppMenuView x:Name="View"/>
+</Window>

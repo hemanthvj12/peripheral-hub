@@ -1,0 +1,22 @@
+{
+  "id": "kreo-ikarus",
+  "name": "Kreo Ikarus",
+  "version": "1.0.0",
+  "sdkVersion": 1,
+  "assembly": "PeripheralHub.Plugins.KreoIkarus.dll",
+  "devices": [
+    { "connection": "usb", "vendorId": "3554", "productId": "FB0C" },
+    { "connection": "usb", "vendorId": "3554", "productId": "FB0E" },
+    { "connection": "bluetooth", "vendorId": "3554", "productId": "F533" }
+  ],
+  "vendorApps": [
+    {
+      "model": "kreo-ikarus",
+      "displayName": "Kreo app",
+      "installedName": "Kreo Ikarus",
+      "exePaths": [ "Sys64/Kreo Ikarus.exe", "Sys32/Kreo Ikarus.exe" ],
+      "processName": "Kreo Ikarus",
+      "defaultInstallFolder": "C:/Program Files/Kreo Ikarus"
+    }
+  ]
+}

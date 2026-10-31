@@ -1,0 +1,10 @@
+{
+  "id": "usb-headsets",
+  "name": "USB headsets",
+  "version": "1.0.0",
+  "sdkVersion": 2,
+  "assembly": "PeripheralHub.Plugins.UsbHeadsets.dll",
+  // Any maker's USB headset counts (a USB device with both speakers and a mic in Windows), so there are no IDs to
+  // match on: it starts with the app and asks Windows' sound devices (a few cheap calls every scan).
+  "alwaysOn": true
+}
