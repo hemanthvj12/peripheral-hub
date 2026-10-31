@@ -32,8 +32,6 @@ public sealed class AppUpdater : INotifyPropertyChanged
     private string? _lastResult;
 
     public event PropertyChangedEventHandler? PropertyChanged;
-    /// <summary>Raised on the UI thread when a downloaded update is ready (for a tray notification).</summary>
-    public event Action<string>? UpdateReady;
 
     public AppUpdater(Dispatcher ui)
     {
@@ -77,7 +75,7 @@ public sealed class AppUpdater : INotifyPropertyChanged
             _ready = update;
             LastResult = null;
             Raise(nameof(ReadyVersion));
-            UpdateReady?.Invoke(ReadyVersion!);
+            AppLog.Write($"Update {ReadyVersion} downloaded; installs at the next start");
         }
         catch (Exception ex)
         {

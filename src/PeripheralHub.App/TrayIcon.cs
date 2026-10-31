@@ -31,10 +31,8 @@ public sealed class TrayIcon : IDisposable
         // replacing the Windows Forms menu (owner, 2026-10-28).
         AttachMenu(_menu.View);
         _ = RefreshHidHideAsync();
+        // No notification when an update is ready (owner: no notifications of any kind); the menu shows it.
         updater.PropertyChanged += (_, _) => RefreshMenu();
-        updater.UpdateReady += version => _icon!.ShowBalloonTip(5000, "PeripheralHub update ready",
-            $"Version {version} is downloaded. It installs the next time PeripheralHub starts, or choose \"Restart to update\" in this menu.",
-            Forms.ToolTipIcon.Info);
 
         _image = IconFactory.CreateIcon(Forms.SystemInformation.SmallIconSize.Width);
         _icon = new Forms.NotifyIcon { Icon = _image, Visible = true, Text = "Peripherals" };
