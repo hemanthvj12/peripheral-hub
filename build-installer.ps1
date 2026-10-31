@@ -9,6 +9,8 @@
                                       installs the .NET 8 Desktop Runtime if it's missing)
         *.nupkg, releases.win.json    update packages (the app checks GitHub Releases for these)
     - With -Publish, uploads everything as a GitHub release, which installed copies then update to.
+    - The release notes are this version's section of CHANGELOG.md ("## x.y.z (date)" up to the next "## "); -Publish
+      refuses to run without one.
     Users install to %LOCALAPPDATA%\PeripheralHub, get a Start-menu shortcut and an entry in Settings > Apps,
     where Uninstall removes it (see Installation.cs for the clean-up it runs).
 
@@ -35,9 +37,33 @@ $repo = $PSScriptRoot
 $repoUrl = 'https://github.com/hemanthvj12/peripheral-hub'
 $publishDir = Join-Path $repo 'artifacts\installer-publish'
 $outputDir = Join-Path $repo 'artifacts\installer'
+$notesFile = Join-Path $repo 'artifacts\release-notes.md'
+
+# This version's section of CHANGELOG.md: the lines after "## <version>" up to the next "## " heading.
+function Get-ReleaseNotes([string]$version) {
+    $lines = Get-Content (Join-Path $repo 'CHANGELOG.md') -Encoding UTF8
+    $start = -1
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match "^## $([regex]::Escape($version))(\s|$)") { $start = $i + 1; break }
+    }
+    if ($start -lt 0) { return $null }
+    $end = $start
+    while ($end -lt $lines.Count -and $lines[$end] -notmatch '^## ') { $end++ }
+    if ($end -le $start) { return $null } # empty section (a..b counts down when b < a)
+    $notes = ($lines[$start..($end - 1)] -join "`n").Trim()
+    if ($notes) { $notes } else { $null }
+}
 
 Push-Location $repo
 try {
+    $notes = Get-ReleaseNotes $Version
+    if (-not $notes) {
+        if ($Publish) { throw "CHANGELOG.md has no section for $Version (a heading like '## $Version (date)'). Add one before releasing." }
+        Write-Warning "CHANGELOG.md has no section for $Version; the installer is built without release notes."
+    }
+    New-Item -ItemType Directory -Force (Split-Path $notesFile) | Out-Null
+    if ($notes) { [IO.File]::WriteAllText($notesFile, $notes + "`n", [Text.UTF8Encoding]::new($false)) }
+
     dotnet tool restore | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'dotnet tool restore failed' }
 
@@ -59,7 +85,9 @@ try {
     }
 
     Write-Host 'Packing installer...'
-    dotnet vpk pack `
+    # vpk puts the notes in the update package, and `vpk upload github` uses them as the release's description.
+    $notesArgs = if ($notes) { @('--releaseNotes', $notesFile) } else { @() }
+    dotnet vpk pack @notesArgs `
         --packId PeripheralHub `
         --packVersion $Version `
         --packDir $publishDir `
