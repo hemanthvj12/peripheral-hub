@@ -17,6 +17,10 @@ public static class Program
             .OnBeforeUninstallFastCallback(_ => Installation.BeforeUninstall())
             .Run();
 
+        // Draw on the CPU: for a few small windows this is plenty, and it skips the Direct3D device and the graphics
+        // driver's buffers, which were a large share of the app's memory.
+        System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+
         var app = new App();
         app.InitializeComponent();
         return app.Run();
