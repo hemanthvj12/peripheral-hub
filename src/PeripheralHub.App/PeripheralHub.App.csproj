@@ -20,6 +20,12 @@
     <Description>Battery, connection and status for your mice, keyboards and controllers.</Description>
     <!-- Program.Main runs Velopack (installer/updater hooks) before WPF starts, so App.xaml isn't the entry point. -->
     <StartupObject>PeripheralHub.App.Program</StartupObject>
+    <!-- Memory (measured 2026-10-31, see CLAUDE.md): DATAS (server GC that adapts to a small heap) keeps a 2 MB gen0
+         budget instead of 16 MB, and without tiered compilation methods are compiled once instead of again later,
+         which also stops memory from creeping up during the first hour. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <GarbageCollectionAdaptationMode>1</GarbageCollectionAdaptationMode>
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
 
   <ItemGroup>
