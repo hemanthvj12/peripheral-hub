@@ -158,17 +158,34 @@ internal static class Ddc
     }
 
     public static MonitorLevel? Read(IntPtr handle, byte code) =>
-        GetVCPFeatureAndVCPFeatureReply(handle, code, IntPtr.Zero, out uint current, out uint max) && max > 0
+        Locked(() => GetVCPFeatureAndVCPFeatureReply(handle, code, IntPtr.Zero, out uint current, out uint max) && max > 0
             ? new MonitorLevel((int)current, (int)max)
-            : null;
+            : null);
 
     /// <summary>Speaker mute; null when the monitor doesn't answer with one of the two defined values.</summary>
     public static bool? ReadMute(IntPtr handle) =>
-        GetVCPFeatureAndVCPFeatureReply(handle, Mute, IntPtr.Zero, out uint current, out _)
-            ? current switch { 1 => true, 2 => false, _ => null }
-            : null;
+        Locked(() => GetVCPFeatureAndVCPFeatureReply(handle, Mute, IntPtr.Zero, out uint current, out _)
+            ? current switch { 1 => true, 2 => false, _ => (bool?)null }
+            : null);
 
-    public static bool Write(IntPtr handle, byte code, int value) => SetVCPFeature(handle, code, (uint)value);
+    public static bool Write(IntPtr handle, byte code, int value) => Locked(() => SetVCPFeature(handle, code, (uint)value));
+
+    /// <summary>
+    /// DDC/CI goes through the graphics driver's I2C, which LightHub also uses for the GPU's lighting chip (that chip
+    /// locked up on 2026-11-01). Both apps take this lock around each transfer so they never use it at the same moment.
+    /// If it stays busy for a second, the call is skipped like a monitor that didn't answer.
+    /// </summary>
+    private static readonly Mutex I2CLock = new(false, @"Local\AmdDisplayI2C");
+
+    private static T? Locked<T>(Func<T> transfer)
+    {
+        bool owned;
+        try { owned = I2CLock.WaitOne(TimeSpan.FromSeconds(1)); }
+        catch (AbandonedMutexException) { owned = true; } // the other app ended while holding it: ours now
+        if (!owned) return default;
+        try { return transfer(); }
+        finally { I2CLock.ReleaseMutex(); }
+    }
 
     private static IntPtr MonitorFor(string sourceName)
     {
