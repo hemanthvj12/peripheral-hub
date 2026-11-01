@@ -98,7 +98,7 @@ try {
         --packDir $publishDir `
         --mainExe PeripheralHub.exe `
         --packTitle PeripheralHub `
-        --packAuthors 'PeripheralHub' `
+        --packAuthors 'hemanthvj12' `
         --icon 'src\PeripheralHub.App\Assets\app.ico' `
         --runtime win-x64 `
         --framework net8-x64-desktop `
