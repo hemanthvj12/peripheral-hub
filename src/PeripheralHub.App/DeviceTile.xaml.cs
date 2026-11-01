@@ -171,7 +171,8 @@ public partial class DeviceTile : UserControl
     {
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(DeviceViewModel.LightHubExe, "--show") { UseShellExecute = true });
+            var exe = DeviceViewModel.LightHubExe ?? throw new System.IO.FileNotFoundException("LightHub isn't installed.");
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe, "--show") { UseShellExecute = true });
             if (!Compact) Window.GetWindow(this)?.Hide(); // close the panel; LightHub's menu is in front now
         }
         catch (Exception ex)

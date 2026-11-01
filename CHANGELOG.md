@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.1.1 (2026-11-02)
+
+### Fixed
+- The keyboard tile's *Open LightHub* button finds LightHub again now that LightHub has its own installer (it lives in a new folder).
+
 ## 1.1.0 (2026-11-02)
 
 ### New

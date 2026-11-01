@@ -313,9 +313,16 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
 
     // ---- LightHub (the owner's own lighting app) owns the lights; the keyboard's drawer opens it.
     //      Owner's decision 2026-10-31: no lights switch in PeripheralHub, just "Open LightHub". ----
-    public static readonly string LightHubExe = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "LightHub", "LightHub.exe");
-    public bool HasLightHub => _s.Id == "aula-f75" && System.IO.File.Exists(LightHubExe);
+    //      LightHub's Setup (since 2026-11-02) installs its launcher to %LOCALAPPDATA%\LightHub\LightHub.exe; before
+    //      that it lived in %LOCALAPPDATA%\Programs\LightHub. Checked on each use, so installing LightHub later works too.
+    private static readonly string LocalAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+    private static readonly string[] LightHubPaths =
+    [
+        System.IO.Path.Combine(LocalAppData, "LightHub", "LightHub.exe"),
+        System.IO.Path.Combine(LocalAppData, "Programs", "LightHub", "LightHub.exe"),
+    ];
+    public static string? LightHubExe => LightHubPaths.FirstOrDefault(System.IO.File.Exists);
+    public bool HasLightHub => _s.Id == "aula-f75" && LightHubExe != null;
 
     public string? Tooltip => Join(_s.Note,
         HasMarker ? "Full DualSense features are on (HapticLink): games see it as a wired controller" : null,
