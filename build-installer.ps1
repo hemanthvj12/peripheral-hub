@@ -24,13 +24,18 @@
     Normally you don't run this with -Publish yourself: push a tag (git tag v1.2.3; git push origin v1.2.3) and
     GitHub builds, tests and publishes the release.
 
+.PARAMETER Install
+    Also install the built version over this PC's installed copy right away (owner's rule for releases).
+
 .EXAMPLE
     ./build-installer.ps1 -Version 1.1.0
 #>
 param(
     [Parameter(Mandatory)] [ValidatePattern('^\d+\.\d+\.\d+$')] [string]$Version,
-    [switch]$Publish
+    [switch]$Publish,
+    [switch]$Install
 )
+$appName = 'PeripheralHub'
 $ErrorActionPreference = 'Stop'
 
 $repo = $PSScriptRoot
@@ -110,5 +115,33 @@ try {
     }
 
     Write-Host "Installer: $(Join-Path $outputDir 'PeripheralHub-win-Setup.exe')"
+    if ($Install) {
+        # Owner, 2026-11-02: install each release here at once instead of waiting for GitHub to publish it and the
+        # installed copy to update itself. Velopack's own updater applies the package and restarts the app; it's started
+        # through Explorer so it runs outside the Claude app's sandbox (which would redirect its writes to AppData).
+        $updateExe = Join-Path $env:LOCALAPPDATA "$appName\Update.exe"
+        if (-not (Test-Path $updateExe)) { throw "$appName isn't installed here (no $updateExe); run its Setup first." }
+        $nupkg = Join-Path $outputDir "$appName-$Version-full.nupkg"
+        $cmd = Join-Path $repo 'artifacts\apply-update.cmd'
+        $log = Join-Path $repo 'artifacts\apply-update.log'
+        Remove-Item $log -ErrorAction SilentlyContinue
+        @(
+            '@echo off'
+            "taskkill /IM $appName.exe /F >nul 2>&1"
+            'timeout /t 2 /nobreak >nul'
+            "`"%LOCALAPPDATA%\$appName\Update.exe`" apply --silent --package `"$nupkg`" > `"$log`" 2>&1"
+            "echo exit %errorlevel% >> `"$log`""
+        ) | Set-Content -Path $cmd -Encoding ascii
+        Write-Host "Installing $Version over the installed copy..."
+        Start-Process explorer.exe -ArgumentList "`"$cmd`""
+        $deadline = (Get-Date).AddSeconds(90)
+        while ((Get-Date) -lt $deadline -and -not ((Test-Path $log) -and (Select-String -Path $log -Pattern '^exit ' -Quiet))) { Start-Sleep 1 }
+        if (-not (Test-Path $log)) { throw "The updater didn't start (no $log)." }
+        if (-not (Select-String -Path $log -Pattern "Package version $([regex]::Escape($Version)) applied successfully" -Quiet)) {
+            Get-Content $log -Tail 15 | Write-Host
+            throw "Installing $Version failed; see $log."
+        }
+        Write-Host "Installed $Version; $appName restarted."
+    }
 }
 finally { Pop-Location }
