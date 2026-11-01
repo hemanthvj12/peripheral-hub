@@ -227,7 +227,57 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+                <!-- HapticLink is giving games this DualSense as a wired one (DeviceViewModel.HasMarker): vibration waves off the controller's top
+                     corners, rippling outward (owner's idea, 2026-11-01). Drawn on the panel picture's 54x38 grid and
+                     scaled for the widget; the arcs reach a little past the picture's edges. -->
+                <Viewbox x:Name="Waves" Stretch="Uniform" Visibility="Collapsed" IsHitTestVisible="False">
+                    <Canvas Width="54" Height="38">
+                        <Canvas.Resources>
+                            <Style TargetType="Path">
+                                <Setter Property="Stroke" Value="{DynamicResource Marker}"/>
+                                <Setter Property="StrokeThickness" Value="1.4"/>
+                                <Setter Property="StrokeStartLineCap" Value="Round"/>
+                                <Setter Property="StrokeEndLineCap" Value="Round"/>
+                                <Setter Property="Opacity" Value="0.2"/>
+                            </Style>
+                        </Canvas.Resources>
+                        <Path x:Name="Wave1" Data="M 4.14,6.96 A 4,4 0 0 1 6.96,4.14 M 47.04,4.14 A 4,4 0 0 1 49.86,6.96"/>
+                        <Path x:Name="Wave2" Data="M 1.24,6.19 A 7,7 0 0 1 6.19,1.24 M 47.81,1.24 A 7,7 0 0 1 52.76,6.19"/>
+                        <Path x:Name="Wave3" Data="M -1.66,5.41 A 10,10 0 0 1 5.41,-1.66 M 48.59,-1.66 A 10,10 0 0 1 55.66,5.41"/>
+                    </Canvas>
+                </Viewbox>
             </Grid>
+            <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding HasMarker}" Value="True">
+                    <Setter TargetName="Waves" Property="Visibility" Value="Visible"/>
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard x:Name="Ripple">
+                            <Storyboard RepeatBehavior="Forever" Duration="0:0:1.4">
+                                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Wave1" Storyboard.TargetProperty="Opacity">
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0.2"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.2" Value="1"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.65" Value="0.2"/>
+                                </DoubleAnimationUsingKeyFrames>
+                                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Wave2" Storyboard.TargetProperty="Opacity">
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0.2"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.15" Value="0.2"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.35" Value="1"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.8" Value="0.2"/>
+                                </DoubleAnimationUsingKeyFrames>
+                                <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Wave3" Storyboard.TargetProperty="Opacity">
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0" Value="0.2"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.3" Value="0.2"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.5" Value="1"/>
+                                    <LinearDoubleKeyFrame KeyTime="0:0:0.95" Value="0.2"/>
+                                </DoubleAnimationUsingKeyFrames>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <StopStoryboard BeginStoryboardName="Ripple"/>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </DataTemplate.Triggers>
         </DataTemplate>
     </UserControl.Resources>
 

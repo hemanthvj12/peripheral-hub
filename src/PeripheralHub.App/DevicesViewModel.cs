@@ -31,14 +31,31 @@ public sealed class DevicesViewModel
     /// </summary>
     public bool SonyControllerPaired { get; private set; }
 
+    /// <summary>A DualSense or DualSense Edge is paired over Bluetooth: HapticLink's switch only matters then.</summary>
+    public bool DualSensePaired { get; private set; }
+
     private static readonly HashSet<ushort> SonyControllerPids = [0x0CE6, 0x0DF2, 0x05C4, 0x09CC];
 
     public void Apply(IReadOnlyList<DeviceSnapshot> snapshots, IReadOnlyDictionary<string, PairedDevice>? pairedBluetooth)
     {
         _live = snapshots;
         if (pairedBluetooth is not null)
+        {
             SonyControllerPaired = pairedBluetooth.Values.Any(p => p.VendorId == 0x054C && p.ProductId is { } pid && SonyControllerPids.Contains(pid));
+            DualSensePaired = pairedBluetooth.Values.Any(p => p.VendorId == 0x054C && p.ProductId is 0x0CE6 or 0x0DF2);
+        }
         Refresh(pairedBluetooth);
+    }
+
+    /// <summary>HapticLink's latest status (null: not installed or not running). The app polls it every few seconds.</summary>
+    public Integration.HapticLinkStatus? HapticLink { get; private set; }
+
+    public void ApplyHapticLink(Integration.HapticLinkStatus? status)
+    {
+        if (status == HapticLink) return;
+        HapticLink = status;
+        foreach (var d in Devices) d.IsHapticLinked = status?.IsBridging(d.Snapshot.BluetoothMac) == true;
+        Changed?.Invoke();
     }
 
     /// <param name="paired">Only passed when the hub sent a fresh paired list, so "missing" counts advance once per scan.</param>
@@ -86,6 +103,7 @@ public sealed class DevicesViewModel
             }
             vm.IsPinned = _kept.IsKept(s.Id);
             vm.IsExpanded = _settings.NoiseExpanded.Contains(s.Id);
+            vm.IsHapticLinked = HapticLink?.IsBridging(s.BluetoothMac) == true;
             // Online but no level: charging (F75: the stored level is the last one before the cable went in), or a
             // level that can't be read right now (a Bluetooth PlayStation controller left in basic reports).
             vm.LevelBeforeCharging = s is { State: LinkState.Online, BatteryPercent: null }

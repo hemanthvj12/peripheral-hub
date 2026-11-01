@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.1.0 (2026-11-02)
+
+### New
+- Works with HapticLink for DualSense (a separate app that makes a DualSense's haptics, adaptive triggers, rumble and lights work in games over Bluetooth): when it's installed, the menu has a *Full DualSense features over Bluetooth* switch that turns it on and off, and your controller's tile keeps its battery and shows animated vibration waves while games use it. HapticLink's virtual controller doesn't get a tile of its own.
+
 ## 1.0.6 (2026-11-01)
 
 ### Improved

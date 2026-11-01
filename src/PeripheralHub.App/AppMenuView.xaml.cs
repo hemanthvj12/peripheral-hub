@@ -13,6 +13,8 @@ public partial class AppMenuView : UserControl
     public event Action? WidgetToggled, OnTopToggled, VirtualToggled, HidHideToggled, StartupToggled, UpdateClicked, LogClicked, ExitClicked;
     /// <summary>"Show Sony controller battery over Bluetooth" clicked.</summary>
     public event Action? SonyBatteryToggled;
+    /// <summary>"Full DualSense features over Bluetooth" (HapticLink's switch) clicked.</summary>
+    public event Action? FullDualSenseToggled;
 
     /// <summary>An action row was clicked: the host closes the menu (before the action runs).</summary>
     public event Action? ActionInvoked;
@@ -26,7 +28,8 @@ public partial class AppMenuView : UserControl
     /// <summary>What the rows show.</summary>
     public sealed record State(bool Widget, bool OnTop, bool Virtual, bool SonyBatteryVisible, bool SonyBattery, bool Startup,
         bool HidHideVisible, bool HidHideOn, bool HidHideEnabled, string? HidHideTooltip,
-        bool UpdateVisible, bool UpdateEnabled, string UpdateText, string? UpdateTooltip);
+        bool UpdateVisible, bool UpdateEnabled, string UpdateText, string? UpdateTooltip,
+        bool FullDualSenseVisible = false, bool FullDualSense = false, bool FullDualSenseEnabled = true, string? FullDualSenseTooltip = null);
 
     public void Refresh(State s)
     {
@@ -35,6 +38,10 @@ public partial class AppMenuView : UserControl
         VirtualRow.Tag = s.Virtual;
         SonyBatteryRow.Visibility = s.SonyBatteryVisible ? Visibility.Visible : Visibility.Collapsed;
         SonyBatteryRow.Tag = s.SonyBattery;
+        FullDualSenseRow.Visibility = s.FullDualSenseVisible ? Visibility.Visible : Visibility.Collapsed;
+        FullDualSenseRow.Tag = s.FullDualSense;
+        FullDualSenseRow.IsEnabled = s.FullDualSenseEnabled;
+        FullDualSenseRow.ToolTip = s.FullDualSenseTooltip;
         StartupRow.Tag = s.Startup;
         HidHideRow.Visibility = s.HidHideVisible ? Visibility.Visible : Visibility.Collapsed;
         HidHideRow.Tag = s.HidHideOn;
@@ -50,6 +57,7 @@ public partial class AppMenuView : UserControl
     private void OnOnTopClick(object sender, RoutedEventArgs e) => OnTopToggled?.Invoke();
     private void OnVirtualClick(object sender, RoutedEventArgs e) => VirtualToggled?.Invoke();
     private void OnSonyBatteryClick(object sender, RoutedEventArgs e) => SonyBatteryToggled?.Invoke();
+    private void OnFullDualSenseClick(object sender, RoutedEventArgs e) => FullDualSenseToggled?.Invoke();
     private void OnHidHideClick(object sender, RoutedEventArgs e) => HidHideToggled?.Invoke();
     private void OnStartupClick(object sender, RoutedEventArgs e) => StartupToggled?.Invoke();
     private void OnUpdateClick(object sender, RoutedEventArgs e) { ActionInvoked?.Invoke(); UpdateClicked?.Invoke(); }

@@ -20,6 +20,9 @@ public sealed class TrayIcon : IDisposable
     public event Action? WidgetToggled;
     public event Action? WidgetOnTopToggled;
     public event Action<bool>? SonyBatteryChanged;
+    /// <summary>"Full DualSense features over Bluetooth": turns HapticLink's switch on or off (set by the app).</summary>
+    public Func<bool, Task>? HapticLinkSwitch { get; set; }
+    private bool _hapticLinkBusy;
 
     public TrayIcon(DevicesViewModel devices, AppSettings settings, AppUpdater updater)
     {
@@ -39,16 +42,17 @@ public sealed class TrayIcon : IDisposable
         _icon.MouseClick += (_, e) => { if (e.Button == Forms.MouseButtons.Left) OpenRequested?.Invoke(); };
         _icon.MouseUp += (_, e) => { if (e.Button == Forms.MouseButtons.Right) ShowMenuAtCursor(); };
         devices.Changed += UpdateTooltip;
-        // The Sony battery row appears or goes as a Sony controller is paired or unpaired.
+        // The Sony rows appear or go as a Sony controller is paired or unpaired (and HapticLink's as it comes and goes).
         devices.Changed += () =>
         {
-            if (_sonyRowShown != devices.SonyControllerPaired) RefreshMenu();
+            if (_sonyRowShown != devices.SonyControllerPaired || _hapticLinkShown != devices.HapticLink) RefreshMenu();
         };
         UpdateTooltip();
     }
 
     private readonly List<AppMenuView> _views = [];
     private bool _sonyRowShown;
+    private Integration.HapticLinkStatus? _hapticLinkShown;
 
     /// <summary>Wires a copy of the menu (the tray window's, the panel's pop-up) to the actions; all copies show the same state.</summary>
     public void AttachMenu(AppMenuView view)
@@ -58,6 +62,7 @@ public sealed class TrayIcon : IDisposable
         view.OnTopToggled += () => { WidgetOnTopToggled?.Invoke(); RefreshMenu(); };
         view.VirtualToggled += () => { _devices.ShowVirtualControllers = !_devices.ShowVirtualControllers; RefreshMenu(); };
         view.SonyBatteryToggled += () => { SonyBatteryChanged?.Invoke(!_settings.ReadBluetoothControllerBattery); RefreshMenu(); };
+        view.FullDualSenseToggled += async () => await ToggleHapticLinkAsync();
         view.HidHideToggled += async () => await ToggleHidHideAsync();
         view.StartupToggled += () => { ToggleStartup(); RefreshMenu(); };
         view.UpdateClicked += async () =>
@@ -92,8 +97,13 @@ public sealed class TrayIcon : IDisposable
     {
         // HidHide row only when HidHide is installed. On = PeripheralHub can see the controllers HidHide hides (DSX turns
         // hiding on whenever it runs). Clicking adds or removes it, with one admin prompt.
+        // While HapticLink hides the real DualSense from games, PeripheralHub must stay on HidHide's allowed list to keep
+        // showing its battery (HapticLink put it there), so the row is locked on then.
+        var hapticLink = _devices.HapticLink;
+        bool hidHideNeeded = hapticLink is { Enabled: true } && _hidHide.Allowed;
         string hidHideTip =
             _hidHide.Error is not null ? $"Couldn't read HidHide's settings: {_hidHide.Error}"
+            : hidHideNeeded ? "Needed while Full DualSense features are on: HapticLink hides your controller from games, and PeripheralHub has to keep reading its battery. Turn that off first."
             : _hidHide.InverseMode ? "HidHide is set to block only the apps on its list; change that in HidHide Configuration Client."
             : _hidHide.Allowed ? "PeripheralHub can see controllers that HidHide hides (e.g. while DSX runs). Click to remove it from HidHide's allowed apps (admin prompt)."
             : "Controllers that HidHide hides (e.g. while DSX runs) are invisible to PeripheralHub. Click to add it to HidHide's allowed apps (admin prompt).";
@@ -113,9 +123,12 @@ public sealed class TrayIcon : IDisposable
             SonyBatteryVisible: _devices.SonyControllerPaired, SonyBattery: _settings.ReadBluetoothControllerBattery,
             Startup: StartupRegistration.IsEnabled,
             HidHideVisible: _hidHide.Installed, HidHideOn: _hidHide.Allowed,
-            HidHideEnabled: !_hidHideBusy && _hidHide.Error is null && !_hidHide.InverseMode, HidHideTooltip: hidHideTip,
-            UpdateVisible: _updater.IsInstalled, UpdateEnabled: !_updater.Checking, UpdateText: updateText, UpdateTooltip: updateTip);
+            HidHideEnabled: !_hidHideBusy && _hidHide.Error is null && !_hidHide.InverseMode && !hidHideNeeded, HidHideTooltip: hidHideTip,
+            UpdateVisible: _updater.IsInstalled, UpdateEnabled: !_updater.Checking, UpdateText: updateText, UpdateTooltip: updateTip,
+            FullDualSenseVisible: hapticLink is not null && _devices.DualSensePaired, FullDualSense: hapticLink?.Enabled == true,
+            FullDualSenseEnabled: !_hapticLinkBusy, FullDualSenseTooltip: HapticLinkTip(hapticLink));
         _sonyRowShown = state.SonyBatteryVisible;
+        _hapticLinkShown = hapticLink;
         foreach (var v in _views) v.Refresh(state);
     }
     private void OpenInShell(string target)
@@ -134,6 +147,29 @@ public sealed class TrayIcon : IDisposable
         if (state == _hidHide) return;
         _hidHide = state;
         RefreshMenu();
+    }
+
+    /// <summary>The switch's tooltip; HapticLink's own status line is added when something is off (no haptics, errors).</summary>
+    private static string HapticLinkTip(Integration.HapticLinkStatus? s)
+    {
+        const string what = "Haptics, adaptive triggers, rumble and lights in games, like on a cable, through HapticLink: games see " +
+                            "a wired DualSense while your controller stays on Bluetooth. Its battery still shows here.";
+        return s is { Enabled: true } && (s.State is "error" or "waiting" || (s.State == "on" && !s.Haptics)) && s.Message.Length > 0
+            ? $"{what}\nHapticLink: {s.Message}"
+            : what;
+    }
+
+    private async Task ToggleHapticLinkAsync()
+    {
+        if (_hapticLinkBusy || HapticLinkSwitch is null || _devices.HapticLink is not { } status) return;
+        _hapticLinkBusy = true;
+        RefreshMenu();
+        await HapticLinkSwitch(!status.Enabled);
+        _hapticLinkBusy = false;
+        RefreshMenu();
+        // HapticLink puts PeripheralHub on HidHide's allowed list when it starts hiding: show that in the HidHide row.
+        await Task.Delay(3000);
+        await RefreshHidHideAsync();
     }
 
     private async Task ToggleHidHideAsync()

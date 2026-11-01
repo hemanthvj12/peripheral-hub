@@ -37,7 +37,7 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
             _classicConnected = context.BluetoothClassicConnected;
             var wanted = context.Hid
                 .Where(h => h.VendorId == SonyProtocol.SonyVid && SonyProtocol.ModelFor(h.ProductId) is not null
-                            && h.UsagePage == 0x01 && h.Usage == 0x05)
+                            && h.UsagePage == 0x01 && h.Usage == 0x05 && !IsHapticLinkPad(h))
                 .ToDictionary(h => h.Path, StringComparer.OrdinalIgnoreCase);
 
             foreach (var (path, s) in _sessions.ToList())
@@ -138,6 +138,13 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
             return result;
         }
     }
+
+    /// <summary>
+    /// HapticLink's virtual wired DualSense (created as SWD\…\HLINK_PAD_0) mirrors the real Bluetooth pad, which keeps its own
+    /// tile with the waves; it isn't a controller of its own, even with "Show virtual controllers" on (owner, 2026-11-02).
+    /// </summary>
+    private static bool IsHapticLinkPad(HidDeviceInfo hid) =>
+        hid.Virtual?.InstanceId.Contains("HLINK_PAD", StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>The controller's Bluetooth address, when its key is one (not a "path-…"/"virtual-…" stand-in).</summary>
     private static string? MacOf(string key) => key.Length == 12 && key.All(Uri.IsHexDigit) ? key.ToLowerInvariant() : null;

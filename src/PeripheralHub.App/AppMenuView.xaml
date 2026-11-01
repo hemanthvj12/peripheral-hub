@@ -114,6 +114,15 @@
                 <TextBlock Text="Show Sony controller battery over Bluetooth" Style="{StaticResource RowLabel}" TextWrapping="Wrap"/>
             </DockPanel>
         </Button>
+        <!-- Full DualSense features over Bluetooth: HapticLink's switch (the owner's separate app gives games a wired
+             DualSense fed by the Bluetooth one). Shown while HapticLink runs and a DualSense is paired over Bluetooth. -->
+        <Button x:Name="FullDualSenseRow" Style="{StaticResource MenuRow}" Click="OnFullDualSenseClick">
+            <DockPanel>
+                <ContentControl DockPanel.Dock="Right" Template="{StaticResource Switch}"/>
+                <TextBlock Text="&#xE7FC;" Style="{StaticResource RowIcon}" VerticalAlignment="Top" Margin="0,1,10,0"/>
+                <TextBlock Text="Full DualSense features over Bluetooth" Style="{StaticResource RowLabel}" TextWrapping="Wrap"/>
+            </DockPanel>
+        </Button>
         <Button x:Name="HidHideRow" Style="{StaticResource MenuRow}" Click="OnHidHideClick">
             <DockPanel>
                 <ContentControl DockPanel.Dock="Right" Template="{StaticResource Switch}"/>

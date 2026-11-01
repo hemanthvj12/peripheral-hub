@@ -81,6 +81,9 @@ public partial class App : Application
             _hubOptions!.SwitchBluetoothControllers = _settings.ReadBluetoothControllerBattery;
             AppLog.Write($"Show Sony controller battery over Bluetooth: {(full ? "on" : "off")}");
         };
+        // HapticLink (the owner's separate DualSense app): its status drives the waves and the menu switch.
+        _hapticLink = new HapticLinkWatcher(Devices);
+        Tray.HapticLinkSwitch = _hapticLink.SetEnabledAsync;
 
         _hub.DevicesChanged += (_, args) => Dispatcher.BeginInvoke(() => Devices.Apply(args.Devices, args.PairedBluetooth));
         // Tiles with their controls open are followed live (the Nothing plugin keeps the earbuds' channel open, monitors
@@ -98,6 +101,7 @@ public partial class App : Application
     }
 
     private GlobalHotkey? _hotkey;
+    private HapticLinkWatcher? _hapticLink;
 
     /// <summary>
     /// Ctrl+Alt+P. Unlike a tray click, pressing it while the panel is open doesn't hide the panel first (it keeps
@@ -153,6 +157,7 @@ public partial class App : Application
         if (_hub is not null) AppLog.Write("PeripheralHub exiting");
         Microsoft.Win32.SystemEvents.SessionSwitch -= OnSessionSwitch;
         _hotkey?.Dispose();
+        _hapticLink?.Dispose();
         Tray?.Dispose();
         _hub?.Dispose();
         _singleInstance?.Dispose();

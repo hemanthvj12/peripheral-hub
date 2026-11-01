@@ -48,6 +48,9 @@ public static class Theme
         SetBadge(r, "ConnDongle", IsDark ? "#B794FF" : "#6B2FD6");
         SetBadge(r, "ConnWired", IsDark ? "#F5B041" : "#A35200");
         SetBadge(r, "ConnDisplay", IsDark ? "#4FD1C5" : "#00767A"); // monitors' video links (DisplayPort, HDMI…)
+        // Marker (the vibration waves on a DualSense that HapticLink is giving games as a wired one): indigo,
+        // between the Bluetooth blue and the brand purple.
+        SetBadge(r, "Marker", IsDark ? "#8E9CFF" : "#3D4FC4");
     }
 
     private static void SetBadge(ResourceDictionary r, string key, string hex)

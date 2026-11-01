@@ -1,7 +1,7 @@
 {
   "id": "sony-controllers",
   "name": "PlayStation controllers",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "sdkVersion": 3,
   "assembly": "PeripheralHub.Plugins.SonyControllers.dll",
   "devices": [

@@ -247,6 +247,17 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
     public ConnectionType Connection => _s.Connection;
     public bool HasConnection => _s.Connection != ConnectionType.None;
 
+    // ---- HapticLink (the owner's separate app) is giving games this DualSense as a wired one: animated waves on its
+    //      picture (owner's idea, 2026-11-01) and a tooltip line. Set by DevicesViewModel from HapticLink's status. ----
+    private bool _hapticLinked;
+    public bool IsHapticLinked
+    {
+        get => _hapticLinked;
+        set { if (_hapticLinked != value) { _hapticLinked = value; Raise(); Raise(nameof(HasMarker)); Raise(nameof(Tooltip)); } }
+    }
+    /// <summary>The vibration waves on the picture.</summary>
+    public bool HasMarker => _hapticLinked && IsOnline;
+
     public string ConnectionText => _s.Connection switch
     {
         ConnectionType.Wired => "Wired",
@@ -306,7 +317,9 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "LightHub", "LightHub.exe");
     public bool HasLightHub => _s.Id == "aula-f75" && System.IO.File.Exists(LightHubExe);
 
-    public string? Tooltip => Join(_s.Note, HasExpandableControls ? (IsExpanded ? "Click to collapse" : "Click to expand") : null) is { Length: > 0 } t ? t : null;
+    public string? Tooltip => Join(_s.Note,
+        HasMarker ? "Full DualSense features are on (HapticLink): games see it as a wired controller" : null,
+        HasExpandableControls ? (IsExpanded ? "Click to collapse" : "Click to expand") : null) is { Length: > 0 } t ? t : null;
 
     private static string Join(params string?[] parts) => string.Join(" · ", parts.Where(p => !string.IsNullOrEmpty(p)));
 
