@@ -64,7 +64,10 @@ Each release needs a higher version than the last. *Run workflow* on the Release
 ```powershell
 ./build-installer.ps1 -Version 1.1.0            # artifacts\installer\PeripheralHub-win-Setup.exe + update packages
 ./build-installer.ps1 -Version 1.1.0 -Publish   # also uploads them as GitHub release v1.1.0 (uses gh's login; normally the tag does this)
+./build-installer.ps1 -Version 1.1.0 -Install   # also installs that version over this PC's installed copy right away
 ```
+
+`-Install` is how a new release reaches this PC without waiting for GitHub: Velopack's updater (`Update.exe apply`) applies the freshly built package and restarts the app. Since it's the same version GitHub publishes from the tag, the installed copy sees nothing newer afterwards. Settings → Apps lists the publisher as hemanthvj12.
 
 It publishes the app and packs it with [Velopack](https://velopack.io) (`vpk`, pinned in `.config/dotnet-tools.json`; `dotnet tool restore` fetches it). Each release needs a higher version than the last.
 
