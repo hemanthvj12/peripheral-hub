@@ -2,6 +2,15 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.2.0 (2026-11-02)
+
+### New
+- A DualSense on its cable shows the vibration waves on its tile: haptics and adaptive triggers already work in games when it's wired.
+
+### Fixed
+- A DualSense on a phone charger over Bluetooth showed 100%; it now shows its real level.
+- The *Full DualSense features over Bluetooth* switch only shows while the HapticLink app is running (HapticLink 1.2.0 turns itself off without it).
+
 ## 1.1.1 (2026-11-02)
 
 ### Fixed

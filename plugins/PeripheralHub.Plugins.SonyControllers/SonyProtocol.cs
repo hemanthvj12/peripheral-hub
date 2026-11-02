@@ -49,7 +49,10 @@ public static class SonyProtocol
         {
             0x0 => new SonyBattery(capacity, ChargeState.Discharging, false),
             0x1 => new SonyBattery(capacity, ChargeState.Charging, true),
-            0x2 => new SonyBattery(100, ChargeState.Full, true),
+            // "Charge complete" doesn't mean 100%: on a phone charger over Bluetooth it sent 0x28 (85%) while the
+            // controller read 0x08 unplugged (2026-11-02). Linux shows 100 regardless; we keep the level, except
+            // level 0, which a really full controller may send (a 5% one can't be complete).
+            0x2 => new SonyBattery(level == 0 ? 100 : capacity, ChargeState.Full, true),
             0xA or 0xB => new SonyBattery(null, ChargeState.Error, true), // voltage / temperature fault
             _ => new SonyBattery(null, ChargeState.Unknown, false),
         };

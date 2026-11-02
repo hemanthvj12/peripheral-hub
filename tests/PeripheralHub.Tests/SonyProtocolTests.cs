@@ -29,6 +29,8 @@ public class SonyProtocolTests
 
     [Theory]
     [InlineData(0x20, 100, ChargeState.Full)]
+    [InlineData(0x28, 85, ChargeState.Full)] // seen on a phone charger over Bluetooth, 85% unplugged
+    [InlineData(0x2A, 100, ChargeState.Full)]
     [InlineData(0xA5, null, ChargeState.Error)]
     [InlineData(0xB5, null, ChargeState.Error)]
     public void DualSense_full_and_error_states(byte status, int? percent, ChargeState state)

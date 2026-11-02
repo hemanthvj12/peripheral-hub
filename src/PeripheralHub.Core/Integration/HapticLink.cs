@@ -44,8 +44,11 @@ public static class HapticLink
     public static Version? Hello() =>
         Ask("HELLO PeripheralHub") is { } reply && Version.TryParse(reply.Split(' ')[0], out var v) ? v : null;
 
-    /// <summary>Null when HapticLink isn't installed or its service isn't running.</summary>
-    public static HapticLinkStatus? Status() => Ask("STATUS") is { } reply ? HapticLinkStatus.Parse(reply) : null;
+    /// <summary>
+    /// Null when HapticLink isn't installed, its service isn't running, or its app (tray) isn't running: since HapticLink
+    /// 1.2.0 the service stays idle without its app and says "closed" (owner, 2026-11-02), so the switch hides then too.
+    /// </summary>
+    public static HapticLinkStatus? Status() => Ask("STATUS") is { } reply && HapticLinkStatus.Parse(reply) is { State: not "closed" } s ? s : null;
 
     /// <summary>Turns the switch on or off (HapticLink remembers it). False when HapticLink couldn't be reached.</summary>
     public static bool SetEnabled(bool enabled) => Ask(enabled ? "ENABLE" : "DISABLE") is not null;

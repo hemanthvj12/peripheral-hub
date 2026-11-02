@@ -255,8 +255,13 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         get => _hapticLinked;
         set { if (_hapticLinked != value) { _hapticLinked = value; Raise(); Raise(nameof(HasMarker)); Raise(nameof(Tooltip)); } }
     }
+    /// <summary>
+    /// A DualSense on its cable: haptics and adaptive triggers already reach games, no HapticLink needed (it turns itself
+    /// off then), so it gets the same waves (owner, 2026-11-02).
+    /// </summary>
+    private bool IsWiredDualSense => _s.Connection == ConnectionType.Wired && _s.Model is "dualsense" or "dualsense-edge";
     /// <summary>The vibration waves on the picture.</summary>
-    public bool HasMarker => _hapticLinked && IsOnline;
+    public bool HasMarker => (_hapticLinked || IsWiredDualSense) && IsOnline;
 
     public string ConnectionText => _s.Connection switch
     {
@@ -325,7 +330,9 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
     public bool HasLightHub => _s.Id == "aula-f75" && LightHubExe != null;
 
     public string? Tooltip => Join(_s.Note,
-        HasMarker ? "Full DualSense features are on (HapticLink): games see it as a wired controller" : null,
+        !HasMarker ? null
+            : IsWiredDualSense ? "Wired: haptics and adaptive triggers work in games"
+            : "Full DualSense features are on (HapticLink): games see it as a wired controller",
         HasExpandableControls ? (IsExpanded ? "Click to collapse" : "Click to expand") : null) is { Length: > 0 } t ? t : null;
 
     private static string Join(params string?[] parts) => string.Join(" · ", parts.Where(p => !string.IsNullOrEmpty(p)));
