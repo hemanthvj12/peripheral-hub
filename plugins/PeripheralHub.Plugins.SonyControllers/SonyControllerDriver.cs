@@ -283,7 +283,7 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
 
         /// <summary>
         /// Reads the controller's paired devices (feature 0x0B) on a worker thread. Only a read: it changes nothing on the
-        /// controller, so it's fine while HapticLink drives it (owner, 2026-11-03: "only HapticLink writes").
+        /// controller, so it doesn't disturb HapticLink while that drives it.
         /// </summary>
         public void ReadPairingLater()
         {
