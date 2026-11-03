@@ -109,6 +109,59 @@ public static class SonyProtocol
         }
         return allZero ? null : new string(chars);
     }
+
+    /// <summary>
+    /// DualSense feature 0x0B: the devices it's paired with, one slot per PS + face button (verified over Bluetooth on the
+    /// owner's DualSense, 2026-11-03). Layout: id, the controller's own MAC (6, little-endian), 08 25 00, then four
+    /// entries of (value, MAC); over Bluetooth a CRC-32 of A3 + the report follows (42 bytes in all). Entries are in a
+    /// fixed order, △ ○ ✕ □ (re-pairing ○ replaced the 2nd entry); the value is 0 for the slot in use (it moved to △'s
+    /// entry after switching with PS + △), the others look like most-recent-use order but that isn't certain.
+    /// </summary>
+    public const byte PairingFeature = 0x0B;
+    public static int PairingFeatureLength(bool bluetooth) => bluetooth ? 42 : 64;
+
+    public static readonly string[] PairingButtons = ["△", "○", "✕", "□"];
+
+    /// <param name="ownMac">The controller's MAC (12 hex digits), checked against the report's.</param>
+    /// <param name="bluetooth">Bluetooth reports carry a CRC, checked; USB ones (untested) don't.</param>
+    public static IReadOnlyList<PairedHost>? ParsePairedHosts(ReadOnlySpan<byte> r, string? ownMac, bool bluetooth)
+    {
+        if (r.Length < (bluetooth ? 42 : 38) || r[0] != PairingFeature) return null;
+        if (bluetooth && Crc32(0xA3, r[..38]) != BitConverter.ToUInt32(r.Slice(38, 4))) return null;
+        if (ownMac is not null && !string.Equals(MacAt(r, 1), ownMac, StringComparison.OrdinalIgnoreCase)) return null;
+        var hosts = new List<PairedHost>(4);
+        for (int i = 0; i < 4; i++)
+        {
+            int at = 10 + i * 7;
+            if (r[at] > 3) return null; // not the layout we know
+            hosts.Add(new PairedHost(i, PairingButtons[i], MacAt(r, at + 1), r[at] == 0));
+        }
+        return hosts.Count(h => h.InUse) <= 1 ? hosts : null;
+    }
+
+    /// <summary>A little-endian MAC at <paramref name="at"/> as 12 lower-case hex digits; null when all zero or all FF (empty).</summary>
+    private static string? MacAt(ReadOnlySpan<byte> r, int at)
+    {
+        var mac = r.Slice(at, 6);
+        if (!mac.ContainsAnyExcept((byte)0) || !mac.ContainsAnyExcept((byte)0xFF)) return null;
+        Span<char> chars = stackalloc char[12];
+        for (int i = 0; i < 6; i++) mac[5 - i].TryFormat(chars.Slice(i * 2, 2), out _, "x2");
+        return new string(chars);
+    }
+
+    /// <summary>zlib CRC-32 over a seed byte (the Bluetooth HID header: A3 for feature replies) and the data.</summary>
+    public static uint Crc32(byte seed, ReadOnlySpan<byte> data)
+    {
+        uint c = 0xFFFFFFFF;
+        void Add(byte b)
+        {
+            c ^= b;
+            for (int k = 0; k < 8; k++) c = (c & 1) != 0 ? (c >> 1) ^ 0xEDB88320u : c >> 1;
+        }
+        Add(seed);
+        foreach (var b in data) Add(b);
+        return ~c;
+    }
 }
 
 public readonly record struct SonyBattery(int? Percent, ChargeState Charging, bool PowerConnected);

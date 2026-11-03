@@ -37,6 +37,11 @@ public sealed class AppSettings
     public bool StartWithWindowsSetUp { get; set; }
     /// <summary>Last battery level seen per device id, shown (greyed) after a restart until a fresh reading arrives.</summary>
     public Dictionary<string, int> LastBattery { get; set; } = [];
+    /// <summary>
+    /// Names found with "Look up names" for the other devices a controller is paired with (Bluetooth address → name),
+    /// kept so they show while those devices are off.
+    /// </summary>
+    public Dictionary<string, string> BluetoothNames { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly string Dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PeripheralHub");
     private static readonly string FilePath = Path.Combine(Dir, "settings.json");

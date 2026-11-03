@@ -8,8 +8,10 @@ namespace PeripheralHub.Plugins.SonyControllers;
 /// Controllers stream input continuously, so battery is decoded passively from every report.
 /// One controller is tracked across connections by its Bluetooth MAC address.
 /// </summary>
-internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDeviceDriver
+internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDeviceDriver, IWatchableDriver
 {
+    private IReadOnlySet<string> _watched = new HashSet<string>();
+
     private readonly object _lock = new();
     private readonly Dictionary<string, Session> _sessions = new(StringComparer.OrdinalIgnoreCase);
     // Controllers seen during this run, kept so they show as Disconnected after they go away.
@@ -83,6 +85,21 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
         if (changed) Changed?.Invoke();
     }
 
+    /// <summary>
+    /// A controller's drawer was just opened: read its paired devices again (they only change when it's paired with
+    /// something, so otherwise they're read once per connection).
+    /// </summary>
+    public void SetWatched(IReadOnlySet<string> deviceIds)
+    {
+        List<Session> reread;
+        lock (_lock)
+        {
+            reread = _sessions.Values.Where(s => deviceIds.Contains($"sony:{s.Key}") && !_watched.Contains($"sony:{s.Key}")).ToList();
+            _watched = deviceIds;
+        }
+        foreach (var s in reread) s.ReadPairingLater();
+    }
+
     private IEnumerable<Session> ActiveSessions(DateTimeOffset now) => _sessions.Values.Where(s =>
         !s.IsClosed &&
         // Real controllers stream reports non-stop, so silence means gone. A virtual one (punktfunk) only reports on
@@ -133,7 +150,7 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
                 result.Add(new DeviceSnapshot($"sony:{known.Key}", name, DeviceKind.Controller, s.Connection, LinkState.Online,
                     b?.Percent, b?.Charging ?? ChargeState.Unknown, batteryAt, s.LastReportAt,
                     Note: note, Model: ModelId(known.Model), BluetoothMac: MacOf(known.Key), Source: SourceOf(known),
-                    BatteryUnavailable: unavailable));
+                    BatteryUnavailable: unavailable, PairedHosts: s.PairedHosts));
             }
             return result;
         }
@@ -258,6 +275,34 @@ internal sealed class SonyControllerDriver(PeripheralHubOptions options) : IDevi
         {
             _conn.Start();
             if (IsBluetooth && _maySwitch()) EnableFullReports();
+            ReadPairingLater();
+        }
+
+        /// <summary>The devices this controller is paired with (DualSense / Edge only; read once per connection).</summary>
+        public IReadOnlyList<PairedHost>? PairedHosts { get; private set; }
+
+        /// <summary>
+        /// Reads the controller's paired devices (feature 0x0B) on a worker thread. Only a read: it changes nothing on the
+        /// controller, so it's fine while HapticLink drives it (owner, 2026-11-03: "only HapticLink writes").
+        /// </summary>
+        public void ReadPairingLater()
+        {
+            if (!SonyProtocol.IsDualSense(_model) || IsVirtual || IsClosed) return;
+            Task.Run(async () =>
+            {
+                // Right after connecting a read can fail; try a few times.
+                IReadOnlyList<PairedHost>? hosts = null;
+                for (int attempt = 0; attempt < 3 && hosts is null && !IsClosed; attempt++)
+                {
+                    if (attempt > 0) await Task.Delay(1500);
+                    var r = _conn.GetFeature(SonyProtocol.PairingFeature, SonyProtocol.PairingFeatureLength(IsBluetooth));
+                    hosts = r is null ? null : SonyProtocol.ParsePairedHosts(r, Mac, IsBluetooth);
+                }
+                if (hosts is null) return;
+                if (PairedHosts is { } old && old.SequenceEqual(hosts)) return;
+                PairedHosts = hosts;
+                Changed?.Invoke();
+            });
         }
 
         /// <summary>

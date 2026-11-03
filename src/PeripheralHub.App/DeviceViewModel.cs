@@ -36,6 +36,7 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         _s = s;
         if (!differs) return;
         _parts = null;
+        _pairedHosts = null;
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(string.Empty)); // everything may have changed
     }
 
@@ -230,7 +231,50 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
     /// The device has a drawer: noise control, monitor sliders, or a maker's app to open. Not while disconnected (it
     /// folds away).
     /// </summary>
-    public bool HasExpandableControls => (HasNoiseControl || HasMonitorControls || HasSound || HasVendorApp || HasLightHub) && _s.State != LinkState.Disconnected;
+    public bool HasExpandableControls => (HasNoiseControl || HasMonitorControls || HasSound || HasVendorApp || HasLightHub || HasPairedHosts)
+                                         && _s.State != LinkState.Disconnected;
+
+    // ---- Paired devices: a DualSense's four slots (PS + △ ○ ✕ □), with names where one is known (owner, 2026-11-03) ----
+
+    /// <summary>Set by the app: a name for a Bluetooth address ("This PC", Windows' name, or one found nearby), or null.</summary>
+    public static Func<string, string?>? NameForAddress { get; set; }
+
+    public bool HasPairedHosts => IsOnline && _s.PairedHosts is { Count: > 0 };
+    public IReadOnlyList<PairedHostViewModel> PairedHosts =>
+        _pairedHosts ??= _s.PairedHosts?.Select(h => new PairedHostViewModel(h.Button, h.Mac,
+            h.Mac is null ? null : NameForAddress?.Invoke(h.Mac), h.InUse)).ToList() ?? [];
+    private IReadOnlyList<PairedHostViewModel>? _pairedHosts;
+
+    /// <summary>Addresses in the list without a name yet: "Look up names" asks them.</summary>
+    public IReadOnlyList<string> UnnamedPairedMacs => PairedHosts.Where(h => h.Mac is not null && h.Name is null)
+        .Select(h => h.Mac!).Distinct().ToList();
+    public bool CanLookUpNames => HasPairedHosts && !_lookingUp && UnnamedPairedMacs.Count > 0;
+
+    /// <summary>A name was found or Windows' list changed: rebuild the rows.</summary>
+    public void NamesChanged()
+    {
+        _pairedHosts = null;
+        Raise(nameof(PairedHosts)); Raise(nameof(CanLookUpNames)); Raise(nameof(ShowLookUpNames));
+    }
+
+    private bool _lookingUp;
+    public bool IsLookingUpNames
+    {
+        get => _lookingUp;
+        set { if (_lookingUp != value) { _lookingUp = value; Raise(); Raise(nameof(LookUpNamesText)); Raise(nameof(CanLookUpNames)); Raise(nameof(ShowLookUpNames)); } }
+    }
+    /// <summary>Shown while some address has no name, and while a lookup runs.</summary>
+    public bool ShowLookUpNames => CanLookUpNames || _lookingUp;
+    public string LookUpNamesText => _lookingUp ? "Looking up names…" : "Look up names";
+
+    private string? _lookupStatus;
+    /// <summary>After a lookup: which addresses didn't answer (and why that happens).</summary>
+    public string? LookupStatus
+    {
+        get => _lookupStatus;
+        set { if (_lookupStatus != value) { _lookupStatus = value; Raise(); Raise(nameof(HasLookupStatus)); } }
+    }
+    public bool HasLookupStatus => _lookupStatus is not null;
 
     /// <summary>The tray tooltip lists battery devices: monitors and wired sound devices have nothing to show there.</summary>
     public bool InBatteryList => !IsMonitor && !(_s.Sound is not null && !HasBattery);
@@ -367,6 +411,21 @@ public sealed record PartViewModel(string Label, int? Percent, bool Charging, bo
         !Live ? "Away"
         : Charging ? "Charging"
         : Percent switch { >= 50 => "High", > 20 => "Medium", _ => "Low" };
+}
+
+/// <summary>One row of a controller's "Paired devices": its button, and the name and address paired to it.</summary>
+public sealed record PairedHostViewModel(string Button, string? Mac, string? Name, bool InUse)
+{
+    public string Address => Mac is null ? "" : string.Join(":", Enumerable.Range(0, 6).Select(i => Mac.Substring(i * 2, 2).ToUpperInvariant()));
+    public bool IsEmpty => Mac is null;
+    /// <summary>The name when known, else the address; "Empty" for an unused slot.</summary>
+    public string Title => IsEmpty ? "Empty" : Name ?? Address;
+    /// <summary>Under a name: the address.</summary>
+    public string? Subtitle => Name is not null ? Address : null;
+    public bool HasSubtitle => Subtitle is not null;
+    public string Tooltip => IsEmpty
+        ? $"PS + {Button}: nothing paired"
+        : $"PS + {Button} switches the controller to {(Name ?? "this device")}" + (InUse ? " (in use now)" : "");
 }
 
 /// <summary>

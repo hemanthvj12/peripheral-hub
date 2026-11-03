@@ -106,4 +106,33 @@ public class SonyProtocolTests
         var feature = Frames.Hex("09 A1 B2 C3 D4 E5 F6 00 00 00 00 00 00 00 00 00 00 00 00 00");
         Assert.Equal("f6e5d4c3b2a1", SonyProtocol.ParseUsbMac(feature));
     }
+
+    // Feature 0x0B in the layout read from the owner's DualSense on 2026-11-03 (addresses replaced by placeholders):
+    // own MAC, 08 25 00, four (value, MAC) entries △ ○ ✕ □, CRC-32 of A3 + report.
+    private static byte[] PairingReport(string entries, bool goodCrc = true)
+    {
+        var r = Frames.Hex("0B F6 E5 D4 C3 B2 A1 08 25 00 " + entries + " 00 00 00 00");
+        uint crc = SonyProtocol.Crc32(0xA3, r.AsSpan(0, 38)) ^ (goodCrc ? 0u : 1u);
+        BitConverter.GetBytes(crc).CopyTo(r, 38);
+        return r;
+    }
+
+    [Fact]
+    public void DualSense_paired_hosts()
+    {
+        var r = PairingReport("01 11 11 11 11 11 11 00 22 22 22 22 22 22 02 11 11 11 11 11 11 03 66 55 44 33 22 11");
+        var hosts = SonyProtocol.ParsePairedHosts(r, "a1b2c3d4e5f6", bluetooth: true)!;
+        Assert.Equal(["△", "○", "✕", "□"], hosts.Select(h => h.Button));
+        Assert.Equal(["111111111111", "222222222222", "111111111111", "112233445566"], hosts.Select(h => h.Mac));
+        Assert.Equal([false, true, false, false], hosts.Select(h => h.InUse));
+    }
+
+    [Fact]
+    public void DualSense_paired_hosts_rejects_bad_crc_other_controller_and_empty_slot()
+    {
+        const string entries = "00 11 11 11 11 11 11 01 00 00 00 00 00 00 02 11 11 11 11 11 11 03 66 55 44 33 22 11";
+        Assert.Null(SonyProtocol.ParsePairedHosts(PairingReport(entries, goodCrc: false), "a1b2c3d4e5f6", bluetooth: true));
+        Assert.Null(SonyProtocol.ParsePairedHosts(PairingReport(entries), "0a0b0c0d0e0f", bluetooth: true));
+        Assert.Null(SonyProtocol.ParsePairedHosts(PairingReport(entries), "a1b2c3d4e5f6", bluetooth: true)![1].Mac);
+    }
 }

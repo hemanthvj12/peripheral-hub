@@ -10,7 +10,8 @@ public static class PluginApi
     // 3: HidConnection.ReportSpanReceived (input reports without a copy each).
     // 4: Transport.CoreAudio / AudioEndpoint (Windows' sound devices and the default-device switch, moved from the
     //    USB headsets plugin so the hub can offer "Set as default" for Bluetooth audio too).
-    public const int Version = 4;
+    // 5: DeviceSnapshot.PairedHosts (the devices a controller is paired with, one per button).
+    public const int Version = 5;
 }
 
 /// <summary>

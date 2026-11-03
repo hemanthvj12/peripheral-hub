@@ -152,6 +152,11 @@ public partial class DeviceTile : UserControl
             MessageBox.Show(error, "PeripheralHub", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private async void OnLookUpNamesClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DeviceViewModel vm) await ((App)Application.Current).Devices.LookUpNamesAsync(vm);
+    }
+
     private async void OnMuteClick(object sender, RoutedEventArgs e)
     {
         if (DataContext is DeviceViewModel vm) await vm.ToggleMuteAsync();

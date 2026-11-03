@@ -22,7 +22,52 @@ public sealed class DevicesViewModel
     {
         _settings = settings;
         _kept = new KeptDevices(settings.Kept);
+        DeviceViewModel.NameForAddress = NameForAddress;
         Refresh(); // kept devices show right away, before the hub's first scan
+    }
+
+    // ---- Names for the devices a controller is paired with (its "Paired devices" list) ----
+
+    private IReadOnlySet<string>? _localMacs;
+    private Dictionary<string, string> _windowsNames = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>This PC, a device paired in Windows, or a name found with "Look up names"; null when none is known.</summary>
+    private string? NameForAddress(string mac) =>
+        (_localMacs ??= global::PeripheralHub.Devices.BluetoothNames.LocalAddresses()).Contains(mac) ? "This PC"
+        : _windowsNames.TryGetValue(mac, out var w) ? w
+        : _settings.BluetoothNames.TryGetValue(mac, out var found) ? found
+        : null;
+
+    /// <summary>
+    /// Asks the addresses in a controller's list that have no name yet for one, and keeps what's found. Takes several
+    /// seconds and holds the PC's Bluetooth radio meanwhile, so it only runs on a click.
+    /// </summary>
+    public async Task LookUpNamesAsync(DeviceViewModel vm)
+    {
+        var macs = vm.UnnamedPairedMacs;
+        if (macs.Count == 0 || vm.IsLookingUpNames) return;
+        vm.IsLookingUpNames = true;
+        vm.LookupStatus = null;
+        try
+        {
+            var found = await global::PeripheralHub.Devices.BluetoothNames.LookUpAsync(macs, AppLog.Write);
+            foreach (var (mac, name) in found) _settings.BluetoothNames[mac] = name;
+            if (found.Count > 0) _settings.Save();
+            int missing = macs.Count - found.Count;
+            vm.LookupStatus = missing == 0 ? null
+                : (missing == 1 ? "One device didn't answer" : $"{missing} devices didn't answer") +
+                  ": it has to be switched on and nearby, with Bluetooth on.";
+        }
+        catch (Exception ex)
+        {
+            AppLog.Write($"Bluetooth names: lookup failed: {ex.Message}");
+            vm.LookupStatus = "Couldn't look up names: " + ex.Message;
+        }
+        finally
+        {
+            vm.IsLookingUpNames = false;
+            foreach (var d in Devices) d.NamesChanged();
+        }
     }
 
     /// <summary>
@@ -43,6 +88,13 @@ public sealed class DevicesViewModel
         {
             SonyControllerPaired = pairedBluetooth.Values.Any(p => p.VendorId == 0x054C && p.ProductId is { } pid && SonyControllerPids.Contains(pid));
             DualSensePaired = pairedBluetooth.Values.Any(p => p.VendorId == 0x054C && p.ProductId is 0x0CE6 or 0x0DF2);
+            var names = pairedBluetooth.Where(p => !string.IsNullOrEmpty(p.Value.Name))
+                .ToDictionary(p => p.Key, p => p.Value.Name!, StringComparer.OrdinalIgnoreCase);
+            if (names.Count != _windowsNames.Count || names.Any(n => !_windowsNames.TryGetValue(n.Key, out var v) || v != n.Value))
+            {
+                _windowsNames = names;
+                foreach (var d in Devices) d.NamesChanged();
+            }
         }
         Refresh(pairedBluetooth);
     }

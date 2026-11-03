@@ -100,6 +100,10 @@ public enum ChargeState { Unknown, Discharging, Charging, Full, Error }
 /// For a device that is one of Windows' sound devices (USB headsets): whether it's the default. The UI can make it
 /// the default through <see cref="Devices.ISoundDeviceDriver"/>.
 /// </param>
+/// <param name="PairedHosts">
+/// For a controller that remembers several devices (DualSense: PS + △ ○ ✕ □): each slot and the address paired to it.
+/// Null when not known.
+/// </param>
 public sealed record DeviceSnapshot(
     string Id,
     string Name,
@@ -121,15 +125,17 @@ public sealed record DeviceSnapshot(
     NoiseControl? NoiseControl = null,
     bool BatteryUnavailable = false,
     MonitorInfo? Monitor = null,
-    SoundDevice? Sound = null)
+    SoundDevice? Sound = null,
+    IReadOnlyList<PairedHost>? PairedHosts = null)
 {
     /// <summary>True when the visible content differs (timestamps ignored: they tick on every poll).</summary>
     public bool DiffersFrom(DeviceSnapshot? other) =>
-        other is null || Normalize(this) != Normalize(other) || !SameParts(Parts, other.Parts);
+        other is null || Normalize(this) != Normalize(other) || !Same(Parts, other.Parts) || !Same(PairedHosts, other.PairedHosts);
 
-    private static DeviceSnapshot Normalize(DeviceSnapshot s) => s with { BatteryUpdatedAt = null, LastSeenAt = null, Parts = null };
+    private static DeviceSnapshot Normalize(DeviceSnapshot s) =>
+        s with { BatteryUpdatedAt = null, LastSeenAt = null, Parts = null, PairedHosts = null };
 
-    private static bool SameParts(IReadOnlyList<BatteryPart>? a, IReadOnlyList<BatteryPart>? b) =>
+    private static bool Same<T>(IReadOnlyList<T>? a, IReadOnlyList<T>? b) =>
         a is null || b is null ? a is null && b is null : a.SequenceEqual(b);
 }
 

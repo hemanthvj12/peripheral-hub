@@ -398,6 +398,68 @@
             <Border x:Name="Drawer" Background="{DynamicResource DrawerBg}" CornerRadius="6" Padding="8" Margin="8,0,8,8"
                     Visibility="Collapsed" MouseLeftButtonDown="OnDrawerMouseDown" MouseLeftButtonUp="OnDrawerMouseUp">
             <StackPanel>
+            <!-- A DualSense's paired devices: one row per PS + button, the slot in use marked (owner, 2026-11-03). -->
+            <StackPanel Visibility="{Binding HasPairedHosts, Converter={StaticResource BoolToVis}}">
+                <TextBlock Text="Paired devices" FontSize="10" Margin="2,0,0,4" Foreground="{DynamicResource TextSecondary}"/>
+                <ItemsControl ItemsSource="{Binding PairedHosts}" Focusable="False">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,2" Background="Transparent" ToolTip="{Binding Tooltip}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="22"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Button}" FontFamily="Segoe UI Symbol" FontSize="12"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                           Foreground="{DynamicResource TextSecondary}"/>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,6,0">
+                                    <TextBlock Text="{Binding Title}" FontSize="11" TextTrimming="CharacterEllipsis">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Subtitle}" FontSize="9.5" Foreground="{DynamicResource TextSecondary}"
+                                               Visibility="{Binding HasSubtitle, Converter={StaticResource BoolToVis}}"/>
+                                </StackPanel>
+                                <Border Grid.Column="2" Background="{DynamicResource DrawerTrack}" CornerRadius="7" Padding="7,1,7,2"
+                                        VerticalAlignment="Center" Visibility="{Binding InUse, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="In use" FontSize="9.5" Foreground="{DynamicResource TextPrimary}"/>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- Asks the unnamed addresses for their names (several seconds; only on a click). -->
+                <Button Click="OnLookUpNamesClick" IsEnabled="{Binding CanLookUpNames}" Margin="0,6,0,0"
+                        ToolTip="Asks each device in the list for its name. It has to be switched on and nearby. Takes a few seconds, and controller haptics may stutter meanwhile."
+                        ToolTipService.ShowOnDisabled="True"
+                        Visibility="{Binding ShowLookUpNames, Converter={StaticResource BoolToVis}}">
+                    <Button.Style>
+                        <Style TargetType="Button" BasedOn="{StaticResource DrawerButton}">
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Cursor" Value="{x:Null}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                        <TextBlock Text="{Binding LookUpNamesText}" FontSize="11" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <TextBlock Text="{Binding LookupStatus}" FontSize="9.5" TextWrapping="Wrap" Margin="2,4,2,0"
+                           Foreground="{DynamicResource TextSecondary}"
+                           Visibility="{Binding HasLookupStatus, Converter={StaticResource BoolToVis}}"/>
+            </StackPanel>
             <StackPanel x:Name="NoiseRow" ToolTip="{Binding NoiseTooltip}"
                         Visibility="{Binding HasNoiseControl, Converter={StaticResource BoolToVis}}">
                 <!-- The mode controls dim while they can't be used (Abyss X open, change in progress); the
