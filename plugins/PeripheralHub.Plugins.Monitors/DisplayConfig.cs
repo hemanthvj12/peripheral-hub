@@ -172,20 +172,58 @@ internal static class Ddc
 
     /// <summary>
     /// DDC/CI goes through the graphics driver's I2C, which LightHub also uses for the GPU's lighting chip (that chip
-    /// locked up on 2026-11-01). Both apps take this lock around each transfer so they never use it at the same moment.
-    /// If it stays busy for a second, the call is skipped like a monitor that didn't answer.
+    /// locked up on 2026-11-01). Both apps take these locks around each transfer so they never use it at the same moment:
+    /// Local\AmdDisplayI2C (same session) first, then Global\AmdDisplayI2C, which also reaches LightHub's lighting
+    /// service in session 0 (LocalService). Same names, order and security as LightHub's GpuGlow.cs.
+    /// If either stays busy for a second, the call is skipped like a monitor that didn't answer.
     /// </summary>
     private static readonly Mutex I2CLock = new(false, @"Local\AmdDisplayI2C");
+    private static readonly Mutex GlobalI2CLock = OpenGlobalLock(@"Global\AmdDisplayI2C");
 
     private static T? Locked<T>(Func<T> transfer)
     {
-        bool owned;
-        try { owned = I2CLock.WaitOne(TimeSpan.FromSeconds(1)); }
-        catch (AbandonedMutexException) { owned = true; } // the other app ended while holding it: ours now
-        if (!owned) return default;
-        try { return transfer(); }
+        if (!Take(I2CLock)) return default;
+        try
+        {
+            if (!Take(GlobalI2CLock)) return default;
+            try { return transfer(); }
+            finally { GlobalI2CLock.ReleaseMutex(); }
+        }
         finally { I2CLock.ReleaseMutex(); }
     }
+
+    private static bool Take(Mutex m)
+    {
+        try { return m.WaitOne(TimeSpan.FromSeconds(1)); }
+        catch (AbandonedMutexException) { return true; } // the other app ended while holding it: ours now
+    }
+
+    /// <summary>The Global lock with a security descriptor that lets every account (LightHub's service, the signed-in user) open it.</summary>
+    private static Mutex OpenGlobalLock(string name)
+    {
+        // D:(A;;GA;;;WD) = Everyone full access. Whoever creates it first sets the security, so both apps use the same one.
+        if (!ConvertStringSecurityDescriptorToSecurityDescriptorW("D:(A;;GA;;;WD)", 1, out var sd, IntPtr.Zero))
+            return new Mutex(false, name);
+        try
+        {
+            var sa = new SecurityAttributes { Length = Marshal.SizeOf<SecurityAttributes>(), SecurityDescriptor = sd };
+            var h = CreateMutexW(ref sa, false, name);
+            if (h == IntPtr.Zero) return new Mutex(false, name);
+            var m = new Mutex();
+            m.SafeWaitHandle.Dispose();
+            m.SafeWaitHandle = new Microsoft.Win32.SafeHandles.SafeWaitHandle(h, true);
+            return m;
+        }
+        finally { LocalFree(sd); }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SecurityAttributes { public int Length; public IntPtr SecurityDescriptor; public bool InheritHandle; }
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr CreateMutexW(ref SecurityAttributes sa, bool initialOwner, string name);
+    [DllImport("kernel32.dll")] private static extern IntPtr LocalFree(IntPtr h);
+    [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern bool ConvertStringSecurityDescriptorToSecurityDescriptorW(string sddl, int revision, out IntPtr sd, IntPtr size);
 
     private static IntPtr MonitorFor(string sourceName)
     {

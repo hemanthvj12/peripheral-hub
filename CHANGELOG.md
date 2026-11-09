@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.3.1 (2026-11-09)
+
+### Fixed
+- Monitor brightness and volume now wait their turn with LightHub's lighting service too (the one that lights your PC from the lock screen), so the two never use the graphics card's connection at the same moment.
+
 ## 1.3.0 (2026-11-03)
 
 ### New
