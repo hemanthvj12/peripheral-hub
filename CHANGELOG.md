@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.3.2 (2026-11-09)
+
+### Fixed
+- Monitor brightness and volume work again: in 1.3.1 the monitor's controls stopped opening while LightHub's lighting service was running.
+
 ## 1.3.1 (2026-11-09)
 
 ### Fixed

@@ -175,16 +175,19 @@ internal static class Ddc
     /// locked up on 2026-11-01). Both apps take these locks around each transfer so they never use it at the same moment:
     /// Local\AmdDisplayI2C (same session) first, then Global\AmdDisplayI2C, which also reaches LightHub's lighting
     /// service in session 0 (LocalService). Same names, order and security as LightHub's GpuGlow.cs.
-    /// If either stays busy for a second, the call is skipped like a monitor that didn't answer.
+    /// If either stays busy for a second, the call is skipped like a monitor that didn't answer. If the Global lock
+    /// can't be opened at all (1.3.1: LightHub's service had made it without access for the user, "access denied"),
+    /// only the Local one is used; failing here must never stop monitor control.
     /// </summary>
     private static readonly Mutex I2CLock = new(false, @"Local\AmdDisplayI2C");
-    private static readonly Mutex GlobalI2CLock = OpenGlobalLock(@"Global\AmdDisplayI2C");
+    private static readonly Mutex? GlobalI2CLock = OpenGlobalLock(@"Global\AmdDisplayI2C");
 
     private static T? Locked<T>(Func<T> transfer)
     {
         if (!Take(I2CLock)) return default;
         try
         {
+            if (GlobalI2CLock == null) return transfer();
             if (!Take(GlobalI2CLock)) return default;
             try { return transfer(); }
             finally { GlobalI2CLock.ReleaseMutex(); }
@@ -199,22 +202,32 @@ internal static class Ddc
     }
 
     /// <summary>The Global lock with a security descriptor that lets every account (LightHub's service, the signed-in user) open it.</summary>
-    private static Mutex OpenGlobalLock(string name)
+    private static Mutex? OpenGlobalLock(string name)
     {
-        // D:(A;;GA;;;WD) = Everyone full access. Whoever creates it first sets the security, so both apps use the same one.
-        if (!ConvertStringSecurityDescriptorToSecurityDescriptorW("D:(A;;GA;;;WD)", 1, out var sd, IntPtr.Zero))
-            return new Mutex(false, name);
         try
         {
-            var sa = new SecurityAttributes { Length = Marshal.SizeOf<SecurityAttributes>(), SecurityDescriptor = sd };
-            var h = CreateMutexW(ref sa, false, name);
-            if (h == IntPtr.Zero) return new Mutex(false, name);
-            var m = new Mutex();
-            m.SafeWaitHandle.Dispose();
-            m.SafeWaitHandle = new Microsoft.Win32.SafeHandles.SafeWaitHandle(h, true);
-            return m;
+            // D:(A;;GA;;;WD) = Everyone full access; S:(ML;;NW;;;LW) = low integrity label, else a lock made by LightHub's
+            // service (System integrity) can't be opened by medium-integrity apps at all. Whoever creates it first sets the
+            // security, so both apps use the same string.
+            if (ConvertStringSecurityDescriptorToSecurityDescriptorW("D:(A;;GA;;;WD)S:(ML;;NW;;;LW)", 1, out var sd, IntPtr.Zero))
+            {
+                try
+                {
+                    var sa = new SecurityAttributes { Length = Marshal.SizeOf<SecurityAttributes>(), SecurityDescriptor = sd };
+                    var h = CreateMutexW(ref sa, false, name);
+                    if (h != IntPtr.Zero)
+                    {
+                        var m = new Mutex();
+                        m.SafeWaitHandle.Dispose();
+                        m.SafeWaitHandle = new Microsoft.Win32.SafeHandles.SafeWaitHandle(h, true);
+                        return m;
+                    }
+                }
+                finally { LocalFree(sd); }
+            }
+            return new Mutex(false, name);
         }
-        finally { LocalFree(sd); }
+        catch { return null; } // exists but not open to us: Local lock only
     }
 
     [StructLayout(LayoutKind.Sequential)]
