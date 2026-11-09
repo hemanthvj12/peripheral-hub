@@ -2,6 +2,13 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.4.0 (2026-11-09)
+
+### New
+- Monitor speakers: click a monitor's tile and choose *Set as default* to play Windows' sound through its speakers.
+- Disconnect Bluetooth earbuds, headphones and controllers from their tile: click the tile, then *Disconnect*. They stay paired.
+- A pinned Bluetooth headset or earbuds that's disconnected shows a *Connect* button on its tile, like Windows' own.
+
 ## 1.3.2 (2026-11-09)
 
 ### Fixed
