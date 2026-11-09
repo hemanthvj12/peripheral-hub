@@ -35,7 +35,13 @@ public static class CoreAudio
     private static readonly PropertyKey EnumeratorName = new(new Guid("a45c254e-df1c-4efd-8020-67d146a850e0"), 24);
     private static readonly PropertyKey FormFactorKey = new(new Guid("1da5d803-d492-4edd-8c23-e0c0ffee7f0e"), 0);
 
-    public static List<AudioEndpoint> ActiveEndpoints()
+    public static List<AudioEndpoint> ActiveEndpoints() => Endpoints(StateActive);
+
+    /// <summary>
+    /// Endpoints in the given DEVICE_STATE_* mask. A paired Bluetooth audio device that isn't connected keeps its
+    /// endpoints as "unplugged" (8).
+    /// </summary>
+    private static List<AudioEndpoint> Endpoints(int stateMask)
     {
         var result = new List<AudioEndpoint>();
         var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
@@ -43,7 +49,7 @@ public static class CoreAudio
         {
             foreach (int flow in new[] { Render, Capture })
             {
-                if (enumerator.EnumAudioEndpoints(flow, StateActive, out var list) != 0) continue;
+                if (enumerator.EnumAudioEndpoints(flow, stateMask, out var list) != 0) continue;
                 list.GetCount(out uint count);
                 for (uint i = 0; i < count; i++)
                 {
@@ -96,6 +102,85 @@ public static class CoreAudio
         }
         finally { Marshal.ReleaseComObject(policy); }
     }
+
+    /// <summary>
+    /// Disconnects a Bluetooth audio device (every sound endpoint in <paramref name="container"/>) the way Windows'
+    /// own "Disconnect" button does: each endpoint's Bluetooth audio driver (the stereo one, the hands-free one for
+    /// calls) is sent KSPROPERTY_ONESHOT_DISCONNECT. Once its audio profiles are down, the device drops the Bluetooth
+    /// link unless another app still holds a connection to it. Returns how many profiles accepted it.
+    /// </summary>
+    public static int DisconnectBluetoothAudio(Guid container) => SendBluetoothOneShot(container, StateActive, KsPropertyOneShotDisconnect);
+
+    /// <summary>
+    /// Connects a paired Bluetooth audio device, as Windows' "Connect" button does (and ToothTray): its endpoints,
+    /// "unplugged" while it's away, are sent KSPROPERTY_ONESHOT_RECONNECT, and Windows pages the device. Returns how
+    /// many profiles accepted the request; whether the device answers (not in its case, in range) shows a few seconds
+    /// later as Windows' connected flag.
+    /// </summary>
+    public static int ConnectBluetoothAudio(Guid container) => SendBluetoothOneShot(container, StateActive | StateUnplugged, KsPropertyOneShotReconnect);
+
+    private const int StateUnplugged = 8;
+    private const int KsPropertyOneShotReconnect = 0, KsPropertyOneShotDisconnect = 1;
+
+    private static int SendBluetoothOneShot(Guid container, int stateMask, int property)
+    {
+        if (container == Guid.Empty) return 0;
+        var filters = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+        try
+        {
+            foreach (var e in Endpoints(stateMask).Where(e => e.Container == container && e.Enumerator.Equals("BTHENUM", StringComparison.OrdinalIgnoreCase)))
+                if (FilterOf(enumerator, e.Id) is { } f) filters.Add(f);
+            int done = 0;
+            foreach (var f in filters)
+                if (SendBluetoothOneShot(enumerator, f, property)) done++;
+            return done;
+        }
+        finally { Marshal.ReleaseComObject(enumerator); }
+    }
+
+    private static readonly Guid KsPropSetIdBtAudio = new("7fa06c40-b8f6-4c7e-8556-e8c33a12e54d");
+    private const int ClsctxAll = 0x17;
+
+    /// <summary>The device id of the driver filter an endpoint is connected to.</summary>
+    private static string? FilterOf(IMMDeviceEnumerator enumerator, string endpointId)
+    {
+        if (enumerator.GetDevice(endpointId, out var device) != 0) return null;
+        try
+        {
+            var iid = typeof(IDeviceTopology).GUID;
+            if (device.Activate(ref iid, ClsctxAll, IntPtr.Zero, out var obj) != 0) return null;
+            var topology = (IDeviceTopology)obj;
+            try
+            {
+                if (topology.GetConnector(0, out var connector) != 0) return null;
+                try { return connector.GetDeviceIdConnectedTo(out var id) == 0 ? id : null; }
+                finally { Marshal.ReleaseComObject(connector); }
+            }
+            finally { Marshal.ReleaseComObject(topology); }
+        }
+        finally { Marshal.ReleaseComObject(device); }
+    }
+
+    private static bool SendBluetoothOneShot(IMMDeviceEnumerator enumerator, string filterId, int property)
+    {
+        if (enumerator.GetDevice(filterId, out var device) != 0) return false;
+        try
+        {
+            var iid = typeof(IKsControl).GUID;
+            if (device.Activate(ref iid, ClsctxAll, IntPtr.Zero, out var obj) != 0) return false;
+            var ks = (IKsControl)obj;
+            try
+            {
+                var p = new KsIdentifier { Set = KsPropSetIdBtAudio, Id = property, Flags = 1 /* KSPROPERTY_TYPE_GET */ };
+                return ks.KsProperty(ref p, Marshal.SizeOf<KsIdentifier>(), IntPtr.Zero, 0, out _) == 0;
+            }
+            finally { Marshal.ReleaseComObject(ks); }
+        }
+        finally { Marshal.ReleaseComObject(device); }
+    }
+
+    [StructLayout(LayoutKind.Sequential)] private struct KsIdentifier { public Guid Set; public int Id; public int Flags; }
 
     /// <summary>
     /// The container (physical device) a device instance belongs to, e.g. a HID gamepad's: a DualSense's or DualShock
@@ -160,6 +245,33 @@ public static class CoreAudio
     {
         [PreserveSig] int EnumAudioEndpoints(int flow, int stateMask, out IMMDeviceCollection devices);
         [PreserveSig] int GetDefaultAudioEndpoint(int flow, int role, out IMMDevice device);
+        [PreserveSig] int GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
+    }
+
+    [ComImport, Guid("2A07407E-6497-4A18-9787-32F79BD0D98F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IDeviceTopology
+    {
+        [PreserveSig] int GetConnectorCount(out uint count);
+        [PreserveSig] int GetConnector(uint index, out IConnector connector);
+    }
+
+    [ComImport, Guid("9c2c4058-23f5-41de-877a-df3af236a09e"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IConnector
+    {
+        [PreserveSig] int GetType(out int type);
+        [PreserveSig] int GetDataFlow(out int flow);
+        [PreserveSig] int ConnectTo(IntPtr connectTo);
+        [PreserveSig] int Disconnect();
+        [PreserveSig] int IsConnected(out bool connected);
+        [PreserveSig] int GetConnectedTo(out IntPtr connectedTo);
+        [PreserveSig] int GetConnectorIdConnectedTo([MarshalAs(UnmanagedType.LPWStr)] out string id);
+        [PreserveSig] int GetDeviceIdConnectedTo([MarshalAs(UnmanagedType.LPWStr)] out string id);
+    }
+
+    [ComImport, Guid("28F54685-06FD-11D2-B27A-00A0C9223196"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    private interface IKsControl
+    {
+        [PreserveSig] int KsProperty(ref KsIdentifier property, int propertyLength, IntPtr data, int dataLength, out int returned);
     }
 
     [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]

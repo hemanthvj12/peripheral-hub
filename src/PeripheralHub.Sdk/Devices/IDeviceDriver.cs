@@ -41,6 +41,19 @@ public interface IWatchableDriver
     void SetWatched(IReadOnlySet<string> deviceIds);
 }
 
+/// <summary>
+/// A driver that talks to a Bluetooth device over its own connection (e.g. an RFCOMM channel). While such a
+/// connection is open, or a periodic one is made, the device stays linked, so a Disconnect would not stick.
+/// </summary>
+public interface IReleasableDriver
+{
+    /// <summary>
+    /// Device <paramref name="deviceId"/> is being disconnected: close any connection to it now and open none until
+    /// Windows reports it disconnected, or for at most <paramref name="atMost"/> (if it never drops).
+    /// </summary>
+    void Release(string deviceId, TimeSpan atMost);
+}
+
 /// <summary>A driver whose devices can switch noise control (see <see cref="DeviceSnapshot.NoiseControl"/>).</summary>
 public interface INoiseControlDriver
 {

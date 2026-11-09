@@ -22,7 +22,7 @@ namespace PeripheralHub.Plugins.NothingEar;
 /// open and a reader applies what the buds announce (ANC push E003, battery push E001) straight away; the minute poll and
 /// mode changes then go over that connection. Closing the controls (or Abyss X starting) hangs up again.
 internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? vendorApp)
-    : IDeviceDriver, INoiseControlDriver, IWatchableDriver
+    : IDeviceDriver, INoiseControlDriver, IWatchableDriver, IReleasableDriver
 {
     private readonly SemaphoreSlim _linkGate = new(1, 1), _sendLock = new(1, 1);
     private HashSet<string> _watchedMacs = new(StringComparer.OrdinalIgnoreCase);
@@ -67,6 +67,7 @@ internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? 
         public (NoiseMode Mode, NoiseStrength? Strength)? AncPending { get; set; }
         public bool SupportsAnc => ModelFor(Name) == Ear2Model;
         public BluetoothSerial? Live { get; set; }          // held open while watched
+        public DateTimeOffset ReleasedUntil { get; set; }   // being disconnected: no connections until it drops or then
         public bool LiveOpening { get; set; }
         public DateTimeOffset LiveRetryAt { get; set; } = DateTimeOffset.MinValue;
     }
@@ -86,7 +87,27 @@ internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? 
         // Opening happens in the next Update (within a scan interval), where connection state is known.
     }
 
-    private bool WantsLive(Earbuds e) => _watchedMacs.Contains(e.Mac) && e.Connected && e.HasService && !_paused;
+    private bool WantsLive(Earbuds e) => _watchedMacs.Contains(e.Mac) && e.Connected && e.HasService && !_paused && !IsReleased(e);
+
+    private static bool IsReleased(Earbuds e) => DateTimeOffset.Now < e.ReleasedUntil;
+
+    /// <summary>
+    /// The earbuds are being disconnected (the tile's Disconnect): hang up now and don't connect again until Windows
+    /// reports them disconnected, since an open NT LINK (or the minute poll) keeps them linked.
+    /// </summary>
+    public void Release(string deviceId, TimeSpan atMost)
+    {
+        if (!deviceId.StartsWith("bt:", StringComparison.OrdinalIgnoreCase)) return;
+        List<BluetoothSerial> close;
+        lock (_lock)
+        {
+            if (!_known.TryGetValue(deviceId[3..], out var e)) return;
+            e.ReleasedUntil = DateTimeOffset.Now + atMost;
+            options.Log?.Invoke($"{e.Name}: staying off while it disconnects");
+            close = TakeUnwantedLinks();
+        }
+        foreach (var l in close) l.Dispose();
+    }
 
     /// <summary>Detaches live links that are no longer wanted (call under the lock; dispose them outside it).</summary>
     private List<BluetoothSerial> TakeUnwantedLinks()
@@ -97,7 +118,7 @@ internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? 
             {
                 e.Live = null;
                 close.Add(l);
-                string why = !_watchedMacs.Contains(e.Mac) ? "controls closed" : !e.Connected ? "Windows reports it disconnected"
+                string why = IsReleased(e) ? "disconnecting" : !_watchedMacs.Contains(e.Mac) ? "controls closed" : !e.Connected ? "Windows reports it disconnected"
                     : !e.HasService ? "NT LINK service not listed" : "the Nothing app is open";
                 options.Log?.Invoke($"{e.Name}: closing the live connection ({why})");
             }
@@ -133,7 +154,7 @@ internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? 
                 {
                     e.Connected = d.Connected;
                     changed = true;
-                    if (!d.Connected) e.LeftLive = e.RightLive = e.CaseLive = false;
+                    if (!d.Connected) { e.LeftLive = e.RightLive = e.CaseLive = false; e.ReleasedUntil = default; }
                     else e.NextQuery = DateTimeOffset.MinValue; // just connected: read right away
                 }
                 if (d.Connected)
@@ -150,7 +171,7 @@ internal sealed class NothingEarDriver(PeripheralHubOptions options, VendorApp? 
                         e.LiveOpening = true;
                         openLive.Add(e);
                     }
-                    else if (e.HasService && !_paused && !e.Querying && !e.LiveOpening && context.Now >= e.NextQuery)
+                    else if (e.HasService && !_paused && !IsReleased(e) && !e.Querying && !e.LiveOpening && context.Now >= e.NextQuery)
                     {
                         e.Querying = true;
                         start.Add(e);

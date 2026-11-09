@@ -34,6 +34,7 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         // every tile re-read all its bindings and rebuild its battery rows, which was most of the app's garbage.
         bool differs = s.DiffersFrom(_s);
         _s = s;
+        if (s.State != LinkState.Disconnected) _connectingUntil = default; // connected: a later Disconnect shows "Connect" again
         if (!differs) return;
         _parts = null;
         _pairedHosts = null;
@@ -118,6 +119,57 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
         (false, true) => "Make this headset Windows' sound output and mic",
         (false, false) => "Make this Windows' sound output (the mic stays as it is)",
     };
+
+    /// <summary>Space above the sound button when another control sits above it (monitor sliders, noise control).</summary>
+    public System.Windows.Thickness SoundRowMargin => HasMonitorControls || HasNoiseControl ? new(0, 8, 0, 0) : new(0);
+
+    // ---- Disconnect, for Bluetooth audio (owner, 2026-11-08; no Connect: Windows has no plain call for it) ----
+    // Shown as soon as it's connected: Windows sets up its sound devices a few seconds later, and Disconnect doesn't
+    // need them (dropping the link takes the audio with it).
+    // Controllers too (owner, 2026-11-08: the DualSense): dropping the link is what DS4Windows does to switch one off.
+    public bool CanDisconnect => IsOnline && _s.Kind is DeviceKind.Audio or DeviceKind.Controller
+                                 && _s.Connection == ConnectionType.Bluetooth && _s.BluetoothMac is not null;
+    public string DisconnectTooltip => _s.Kind == DeviceKind.Controller
+        ? "Disconnects it from this PC. It stays paired: press its PS button to connect again."
+        : "Disconnects it from this PC. It stays paired: connect it again from here, the device or Windows' Bluetooth settings.";
+
+    // ---- Connect, for a disconnected Bluetooth audio tile (owner, 2026-11-08): a pill in place of "Disconnected" ----
+
+    /// <summary>Set by the app: asks Windows to connect a paired Bluetooth audio device (MAC); returns null or an error.</summary>
+    public static Func<string, Task<string?>>? ConnectBluetooth { get; set; }
+
+    private static readonly TimeSpan ConnectWait = TimeSpan.FromSeconds(15);
+    private DateTime _connectingUntil;
+
+    public bool CanConnect => _s.State == LinkState.Disconnected && _s.Kind == DeviceKind.Audio && _s.BluetoothMac is not null
+                              && ConnectBluetooth is not null;
+    public bool IsConnecting => CanConnect && DateTime.UtcNow < _connectingUntil;
+    public string ConnectText => IsConnecting ? "Connecting…" : "Connect";
+    /// <summary>"Disconnected" gives way to the Connect pill.</summary>
+    public bool ShowStatusText => !CanConnect;
+
+    public async Task ConnectAsync()
+    {
+        if (!CanConnect || IsConnecting || ConnectBluetooth is null) return;
+        _connectingUntil = DateTime.UtcNow + ConnectWait;
+        RaiseConnect();
+        string? error;
+        try { error = await ConnectBluetooth(_s.BluetoothMac!); }
+        catch (Exception) { error = "Couldn't connect it."; }
+        if (error is not null)
+        {
+            _connectingUntil = default;
+            RaiseConnect();
+            System.Windows.MessageBox.Show(error, "PeripheralHub", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            return;
+        }
+        // The tile turns connected once Windows reports it; if the device never answers (in its case, out of range),
+        // the pill comes back when the wait ends.
+        await Task.Delay(ConnectWait + TimeSpan.FromMilliseconds(50));
+        RaiseConnect();
+    }
+
+    private void RaiseConnect() { Raise(nameof(IsConnecting)); Raise(nameof(ConnectText)); }
 
     // ---- Monitor speaker mute: the speaker icon left of the volume slider is a button ----
 
@@ -231,7 +283,7 @@ public sealed class DeviceViewModel(DeviceSnapshot snapshot) : INotifyPropertyCh
     /// The device has a drawer: noise control, monitor sliders, or a maker's app to open. Not while disconnected (it
     /// folds away).
     /// </summary>
-    public bool HasExpandableControls => (HasNoiseControl || HasMonitorControls || HasSound || HasVendorApp || HasLightHub || HasPairedHosts)
+    public bool HasExpandableControls => (HasNoiseControl || HasMonitorControls || HasSound || CanDisconnect || HasVendorApp || HasLightHub || HasPairedHosts)
                                          && _s.State != LinkState.Disconnected;
 
     // ---- Paired devices: a DualSense's four slots (PS + △ ○ ✕ □), with names where one is known (owner, 2026-11-03) ----

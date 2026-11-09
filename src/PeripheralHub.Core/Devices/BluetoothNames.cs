@@ -157,7 +157,7 @@ public static class BluetoothNames
 
     private static string Format(ulong address) => address.ToString("x12");
 
-    private static List<SafeRadioHandle> Radios()
+    internal static List<SafeRadioHandle> Radios()
     {
         var list = new List<SafeRadioHandle>();
         var p = new FindRadioParams { dwSize = Marshal.SizeOf<FindRadioParams>() };
@@ -173,7 +173,7 @@ public static class BluetoothNames
 
     // ---- Win32 ----
 
-    private sealed class SafeRadioHandle() : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid(true)
+    internal sealed class SafeRadioHandle() : Microsoft.Win32.SafeHandles.SafeHandleZeroOrMinusOneIsInvalid(true)
     {
         protected override bool ReleaseHandle() => CloseHandle(handle);
     }

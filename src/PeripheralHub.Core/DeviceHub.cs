@@ -237,6 +237,68 @@ public sealed class DeviceHub : IDisposable
         }
     }
 
+    /// <summary>After a Disconnect, how long a driver keeps off the device at most if Windows never reports it gone.</summary>
+    private static readonly TimeSpan ReleaseFor = TimeSpan.FromSeconds(60);
+
+    /// <summary>
+    /// Disconnects a Bluetooth audio device or controller (owner, 2026-11-08). The driver reporting it is told to
+    /// close its own connection and stay off first (<see cref="IReleasableDriver"/>, e.g. Nothing's NT LINK), since
+    /// any open connection keeps the device linked. Windows can take 20-30 s to report it disconnected.
+    /// </summary>
+    /// <returns>Null on success, else a short message for the user.</returns>
+    public async Task<string?> DisconnectBluetoothAsync(string deviceId)
+    {
+        var device = Devices.FirstOrDefault(d => d.Id == deviceId);
+        if (device is not { Kind: DeviceKind.Audio or DeviceKind.Controller, BluetoothMac: { } mac })
+            return "Only Bluetooth audio devices and controllers can be disconnected from here.";
+        try
+        {
+            DriverOf<IReleasableDriver>(deviceId)?.Release(deviceId, ReleaseFor);
+            // Audio first (as Windows does), then the link itself, or the device brings its audio back over it. The
+            // audio step is skipped while Windows hasn't set up the sound devices yet (a few seconds after connecting):
+            // the link going down takes the audio with it anyway.
+            int profiles = Volatile.Read(ref _pairedContainers).TryGetValue(mac, out var container)
+                ? await Task.Run(() => CoreAudio.DisconnectBluetoothAudio(container), _cts.Token).ConfigureAwait(false)
+                : 0;
+            var link = await Task.Run(() => BluetoothLink.Disconnect(mac), _cts.Token).ConfigureAwait(false);
+            _options.Log?.Invoke($"Disconnect {deviceId}: {profiles} audio profile(s), link {link ?? "done"}");
+            Signal();
+            return link is null || profiles > 0 ? null : "Windows didn't accept the disconnect.";
+        }
+        catch (Exception ex)
+        {
+            _options.Log?.Invoke($"Disconnect {deviceId} failed: {ex}");
+            return "Couldn't disconnect it.";
+        }
+    }
+
+    /// <summary>Paired Bluetooth devices' containers (MAC → container id), from the latest scan.</summary>
+    private IReadOnlyDictionary<string, Guid> _pairedContainers = new Dictionary<string, Guid>();
+
+    /// <summary>
+    /// Asks Windows to connect a paired Bluetooth audio device, as its own Connect button does (owner, 2026-11-08,
+    /// after Disconnect: "windows does give this option to connect"). Takes a MAC, since a kept tile can be a
+    /// placeholder no driver reports. Whether the device answers (out of its case, in range) shows at the next scans.
+    /// </summary>
+    /// <returns>Null when Windows took the request, else a short message for the user.</returns>
+    public async Task<string?> ConnectBluetoothAsync(string mac)
+    {
+        if (!Volatile.Read(ref _pairedContainers).TryGetValue(mac, out var container))
+            return "Windows doesn't list it as paired.";
+        try
+        {
+            int done = await Task.Run(() => CoreAudio.ConnectBluetoothAudio(container), _cts.Token).ConfigureAwait(false);
+            _options.Log?.Invoke($"Connect {mac}: {(done > 0 ? $"asked {done} audio profile(s)" : "no audio profiles")}");
+            Signal();
+            return done > 0 ? null : "Windows has no sound device for it to connect.";
+        }
+        catch (Exception ex)
+        {
+            _options.Log?.Invoke($"Connect {mac} failed: {ex}");
+            return "Couldn't connect it.";
+        }
+    }
+
     /// <summary>The driver reporting <paramref name="deviceId"/>, if it supports <typeparamref name="T"/>.</summary>
     private T? DriverOf<T>(string deviceId) where T : class
     {
@@ -316,6 +378,7 @@ public sealed class DeviceHub : IDisposable
             var nodes = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
             foreach (var d in context.BluetoothClassic) if (d.Container is { } c) nodes.TryAdd(d.Mac, c);
             foreach (var d in context.BluetoothLe) if (d.Container is { } c) nodes.TryAdd(d.Mac, c);
+            Volatile.Write(ref _pairedContainers, nodes); // for Connect, which works on paired devices that are away
             var containers = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
             foreach (var s in Snapshots(_pluginDrivers.Concat(_otherDrivers), now))
                 if (s is { Kind: DeviceKind.Audio, State: LinkState.Online, Sound: null, BluetoothMac: { } mac } && nodes.TryGetValue(mac, out var c))

@@ -10,9 +10,17 @@ namespace PeripheralHub.Plugins.Monitors;
 /// appears. A monitor that is unplugged, switched off or turned off in Windows' display settings drops out of the
 /// active list and shows as Disconnected for the rest of the run (the UI hides it unless pinned).
 /// Verified 2026-10-29 with an Acer VG240Y S on DisplayPort: brightness (0x10) and volume (0x62) out of 100.
+/// <para>
+/// "Set as default" for the monitor's speakers (owner, 2026-11-08): Windows files the speakers' sound endpoint (an
+/// HDAUDIO "Monitor Speaker" on the graphics card's audio device) in the same container as the monitor's DISPLAY\
+/// node (seen on the Acer), so they're matched by container.
+/// </para>
 /// </summary>
-internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWatchableDriver
+internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWatchableDriver, ISoundDeviceDriver
 {
+    /// <summary>The container Windows gives devices it can't place, and the PC's own devices (e.g. a laptop screen).</summary>
+    private static readonly Guid NoContainer = new("00000000-0000-0000-ffff-ffffffffffff");
+
     private static readonly TimeSpan ReadInterval = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan WatchedReadInterval = TimeSpan.FromSeconds(3);
     /// <summary>After a change, wait before reading back: some monitors still answer with the old value right away.</summary>
@@ -35,6 +43,9 @@ internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWat
         public bool DdcAnswered;           // DDC/CI ever answered
         public int DdcFailures;
         public DateTimeOffset NextRead;
+        public Guid? Container;            // its DISPLAY\ node's container: its speakers share it
+        public List<string> Speakers = []; // its sound outputs in Windows, if any
+        public bool SpeakersDefault;
     }
 
     private readonly PeripheralHubOptions _options;
@@ -85,6 +96,8 @@ internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWat
                     e = new Entry { Id = id, BaseName = who.Name, Connection = who.Connection, Creator = who.Creator, Display = d };
                     _entries[id] = e;
                 }
+                if (e.Display.InstanceId != d.InstanceId || e.Container is null)
+                    e.Container = d.InstanceId.Length > 0 && who.Connection != ConnectionType.Virtual ? CoreAudio.ContainerOf(d.InstanceId) : null;
                 if (!e.Online) { e.NextRead = context.Now; wake = true; } // new or back: read its settings now
                 e.Online = true;
                 e.Display = d;
@@ -102,8 +115,61 @@ internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWat
             }
             NameDuplicates();
         }
+        UpdateSpeakers();
         if (wake) _wake.Set();
         Publish();
+    }
+
+    /// <summary>Finds each connected monitor's speakers among Windows' sound devices (cheap; no device traffic).</summary>
+    private void UpdateSpeakers()
+    {
+        List<(Entry E, Guid Container)> wanted;
+        lock (_lock)
+            wanted = _entries.Values.Where(e => e.Online && e.Container is { } c && c != Guid.Empty && c != NoContainer)
+                .Select(e => (e, e.Container!.Value)).ToList();
+        List<AudioEndpoint> endpoints = [];
+        string? defaultOutput = null;
+        if (wanted.Count > 0)
+        {
+            try
+            {
+                endpoints = CoreAudio.ActiveEndpoints();
+                defaultOutput = CoreAudio.Defaults().Output;
+            }
+            catch (Exception ex) { _options.Log?.Invoke($"Monitors: reading sound devices failed: {ex.Message}"); }
+        }
+        lock (_lock)
+        {
+            foreach (var e in _entries.Values) { e.Speakers = []; e.SpeakersDefault = false; }
+            foreach (var (e, container) in wanted)
+            {
+                e.Speakers = SpeakersOf(endpoints, container);
+                e.SpeakersDefault = defaultOutput is not null && e.Speakers.Contains(defaultOutput);
+            }
+        }
+    }
+
+    /// <summary>The monitor's speakers: the outputs in its container.</summary>
+    internal static List<string> SpeakersOf(IEnumerable<AudioEndpoint> endpoints, Guid container) =>
+        container == Guid.Empty || container == NoContainer
+            ? []
+            : endpoints.Where(x => x.IsOutput && x.Container == container).Select(x => x.Id).ToList();
+
+    public async Task<string?> MakeDefaultSoundDeviceAsync(string deviceId, CancellationToken ct = default)
+    {
+        List<string> speakers;
+        lock (_lock)
+        {
+            if (!_entries.TryGetValue(deviceId, out var e) || !e.Online) return "The monitor isn't connected.";
+            speakers = e.Speakers;
+        }
+        if (speakers.Count == 0) return "Windows has no speakers for this monitor right now.";
+        bool ok = await Task.Run(() => speakers.Aggregate(true, (all, id) => CoreAudio.SetDefault(id) & all), ct).ConfigureAwait(false);
+        if (!ok) return "Windows didn't accept the change.";
+        lock (_lock)
+            if (_entries.TryGetValue(deviceId, out var e)) e.SpeakersDefault = true; // shows at once; the next scan re-reads it
+        Publish();
+        return null;
     }
 
     private (string Id, string Name, ConnectionType Connection, string? Creator) IdentityOf(ActiveDisplay d)
@@ -160,7 +226,8 @@ internal sealed class MonitorDriver : IDeviceDriver, IMonitorControlDriver, IWat
         return new DeviceSnapshot(e.Id, e.Name, DeviceKind.Monitor, e.Connection, LinkState.Online, null, ChargeState.Unknown,
             null, Note: note, Source: e.Creator,
             Monitor: new MonitorInfo(d.Width, d.Height, (int)Math.Round(d.RefreshHz), e.Brightness, e.Volume,
-                e.Volume is null ? null : e.Muted)); // mute only means something with speakers
+                e.Volume is null ? null : e.Muted), // mute only means something with speakers
+            Sound: e.Speakers.Count > 0 ? new SoundDevice(HasOutput: true, HasInput: false, e.SpeakersDefault) : null);
     }
 
     public IReadOnlyList<DeviceSnapshot> GetSnapshots(DateTimeOffset now)

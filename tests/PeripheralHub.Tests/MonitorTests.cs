@@ -1,4 +1,5 @@
 using PeripheralHub.Plugins.Monitors;
+using PeripheralHub.Transport;
 
 namespace PeripheralHub.Tests;
 
@@ -87,4 +88,24 @@ public class MonitorTests
     [InlineData(5, 0, 0)]
     public void Levels_show_as_percent(int value, int max, int percent) =>
         Assert.Equal(percent, new MonitorLevel(value, max).Percent);
+
+    /// <summary>
+    /// Seen 2026-11-08: "Monitor Speaker (2- AMD High Definition Audio Device)" shares the Acer's DISPLAY\ container;
+    /// software devices (Steam, Punktfunk) and the PC's own sound sit in the catch-all container.
+    /// </summary>
+    [Fact]
+    public void Speakers_are_the_outputs_in_the_monitors_container()
+    {
+        var monitor = Guid.NewGuid();
+        var none = new Guid("00000000-0000-0000-ffff-ffffffffffff");
+        var endpoints = new[]
+        {
+            new AudioEndpoint("speaker", true, "2- AMD High Definition Audio Device", monitor, "HDAUDIO", 1),
+            new AudioEndpoint("mic", false, "Monitor mic", monitor, "HDAUDIO", 4),
+            new AudioEndpoint("steam", true, "Steam Streaming Speakers", none, "ROOT"),
+            new AudioEndpoint("headset", true, "4- CB CryoCore", Guid.NewGuid(), "USB"),
+        };
+        Assert.Equal(["speaker"], MonitorDriver.SpeakersOf(endpoints, monitor));
+        Assert.Empty(MonitorDriver.SpeakersOf(endpoints, none)); // a laptop screen: the PC's own speakers aren't its
+    }
 }

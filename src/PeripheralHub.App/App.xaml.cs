@@ -54,6 +54,7 @@ public partial class App : Application
         PluginAssets.Plugins = _hub.Plugins;
         DeviceViewModel.SetMonitorLevel = (id, setting, percent) => _hub.SetMonitorLevelAsync(id, setting, percent);
         DeviceViewModel.SetMonitorMute = (id, muted) => _hub.SetMonitorMuteAsync(id, muted);
+        DeviceViewModel.ConnectBluetooth = mac => _hub.ConnectBluetoothAsync(mac);
 
         _flyout = new FlyoutWindow(Devices);
         _widget = new WidgetWindow(Devices, _settings);
@@ -144,6 +145,10 @@ public partial class App : Application
     /// <summary>From a headset tile's drawer. Returns null on success, else a message for the user.</summary>
     public Task<string?> MakeDefaultSoundDeviceAsync(string deviceId) =>
         _hub is null ? Task.FromResult<string?>("Not ready yet.") : _hub.MakeDefaultSoundDeviceAsync(deviceId);
+
+    /// <summary>From a Bluetooth audio tile's drawer. Returns null on success, else a message for the user.</summary>
+    public Task<string?> DisconnectBluetoothAsync(string deviceId) =>
+        _hub is null ? Task.FromResult<string?>("Not ready yet.") : _hub.DisconnectBluetoothAsync(deviceId);
 
     public void ToggleWidgetOnTop()
     {

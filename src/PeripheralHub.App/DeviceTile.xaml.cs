@@ -152,6 +152,18 @@ public partial class DeviceTile : UserControl
             MessageBox.Show(error, "PeripheralHub", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
+    private async void OnConnectClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is DeviceViewModel vm) await vm.ConnectAsync();
+    }
+
+    private async void OnDisconnectClick(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not DeviceViewModel vm) return;
+        if (await ((App)Application.Current).DisconnectBluetoothAsync(vm.Id) is { } error)
+            MessageBox.Show(error, "PeripheralHub", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
     private async void OnLookUpNamesClick(object sender, RoutedEventArgs e)
     {
         if (DataContext is DeviceViewModel vm) await ((App)Application.Current).Devices.LookUpNamesAsync(vm);

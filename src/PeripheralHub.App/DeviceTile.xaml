@@ -125,6 +125,36 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <!-- A small pill on a disconnected Bluetooth audio tile: "Connect", in place of the "Disconnected" text. -->
+        <Style x:Key="ConnectPill" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimary}"/>
+            <Setter Property="Background" Value="{DynamicResource DrawerTrack}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="ToolTip" Value="Asks Windows to connect it. It has to be switched on (out of its case) and nearby."/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="10">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource Track}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsConnecting}" Value="True">
+                    <Setter Property="Opacity" Value="0.6"/>
+                    <Setter Property="Cursor" Value="{x:Null}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!-- A full-width pill in the drawer ("Open Abyss X"). -->
         <Style x:Key="DrawerButton" TargetType="Button">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondary}"/>
@@ -298,19 +328,27 @@
                                   Width="54" Height="38" HorizontalAlignment="Left" VerticalAlignment="Center"
                                   Style="{StaticResource DimWhenAway}"/>
 
-                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,20,0" Style="{StaticResource DimWhenAway}">
-                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold"
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,20,0">
+                    <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" Style="{StaticResource DimWhenAway}"
                                Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
                     <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
-                        <Border Style="{StaticResource ConnectionBadge}">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="10"
-                                           VerticalAlignment="Center" Margin="0,1,4,0"/>
-                                <TextBlock Text="{Binding ConnectionText}" FontSize="11" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                        <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextSecondary}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Orientation="Horizontal" Style="{StaticResource DimWhenAway}">
+                            <Border Style="{StaticResource ConnectionBadge}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="10"
+                                               VerticalAlignment="Center" Margin="0,1,4,0"/>
+                                    <TextBlock Text="{Binding ConnectionText}" FontSize="11" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Visibility="{Binding ShowStatusText, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                        <!-- Disconnected Bluetooth audio: Connect, not dimmed (the one thing to do here). -->
+                        <Button Style="{StaticResource ConnectPill}" Click="OnConnectClick" Height="20"
+                                Visibility="{Binding CanConnect, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding ConnectText}" FontSize="11" Margin="10,0"/>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
 
@@ -349,7 +387,7 @@
             </Grid>
 
             <!-- ===== Compact tile (widget) ===== -->
-            <Grid x:Name="CompactLayout" Margin="8,6,10,6" Visibility="Collapsed" Style="{StaticResource DimWhenAway}">
+            <Grid x:Name="CompactLayout" Margin="8,6,10,6" Visibility="Collapsed">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="40"/>
                     <ColumnDefinition Width="*"/>
@@ -357,26 +395,33 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource DevicePicture}"
-                                  Width="36" Height="26" HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                                  Width="36" Height="26" HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource DimWhenAway}"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,16,0">
-                    <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold"
+                    <TextBlock Text="{Binding Name}" FontSize="12" FontWeight="SemiBold" Style="{StaticResource DimWhenAway}"
                                Foreground="{DynamicResource TextPrimary}" TextTrimming="CharacterEllipsis"/>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <Border Style="{StaticResource ConnectionBadge}" Padding="4,0,5,0" Margin="0,0,5,0">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="8.5"
-                                           VerticalAlignment="Center" Margin="0,1,3,0"/>
-                                <TextBlock Text="{Binding ConnectionText}" FontSize="9.5" FontWeight="SemiBold"/>
-                            </StackPanel>
-                        </Border>
-                        <TextBlock Text="{Binding StatusText}" FontSize="10.5" Foreground="{DynamicResource TextSecondary}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        <StackPanel Orientation="Horizontal" Style="{StaticResource DimWhenAway}">
+                            <Border Style="{StaticResource ConnectionBadge}" Padding="4,0,5,0" Margin="0,0,5,0">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding ConnectionGlyph}" FontFamily="{StaticResource IconFont}" FontSize="8.5"
+                                               VerticalAlignment="Center" Margin="0,1,3,0"/>
+                                    <TextBlock Text="{Binding ConnectionText}" FontSize="9.5" FontWeight="SemiBold"/>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding StatusText}" FontSize="10.5" Foreground="{DynamicResource TextSecondary}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       Visibility="{Binding ShowStatusText, Converter={StaticResource BoolToVis}}"/>
+                        </StackPanel>
+                        <Button Style="{StaticResource ConnectPill}" Click="OnConnectClick" Height="16"
+                                Visibility="{Binding CanConnect, Converter={StaticResource BoolToVis}}">
+                            <TextBlock Text="{Binding ConnectText}" FontSize="9.5" Margin="8,0"/>
+                        </Button>
                     </StackPanel>
                 </StackPanel>
                 <ItemsControl Grid.Column="2" ItemsSource="{Binding Parts}" ItemTemplate="{StaticResource PartRowCompact}"
-                              VerticalAlignment="Center" Focusable="False"
+                              VerticalAlignment="Center" Focusable="False" Style="{StaticResource DimWhenAway}"
                               Visibility="{Binding HasParts, Converter={StaticResource BoolToVis}}"/>
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Style="{StaticResource DimWhenAway}"
                             Visibility="{Binding ShowSingleBattery, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{Binding BatteryText}" Style="{StaticResource BatteryTextCompact}" MinWidth="32" TextAlignment="Right"
                                VerticalAlignment="Center" Margin="0,0,5,0"/>
@@ -384,7 +429,7 @@
                                       VerticalAlignment="Center"
                                       Visibility="{Binding ShowBatteryIcon, Converter={StaticResource BoolToVis}}"/>
                 </StackPanel>
-                <StackPanel Grid.Column="2" VerticalAlignment="Center"
+                <StackPanel Grid.Column="2" VerticalAlignment="Center" Style="{StaticResource DimWhenAway}"
                             Visibility="{Binding HasMonitorMode, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{Binding ResolutionText}" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Right"
                                Foreground="{DynamicResource TextPrimary}"/>
@@ -598,8 +643,9 @@
                            Visibility="{Binding HasVolume, Converter={StaticResource BoolToVis}}"/>
             </Grid>
 
-            <!-- Sound devices (USB headsets): make it Windows' default output and mic; shows a check once it is. -->
-            <Button Click="OnSetDefaultSoundClick" IsEnabled="{Binding CanSetDefaultSound}"
+            <!-- Sound devices (USB headsets, Bluetooth audio, monitor speakers): make it Windows' default output (and a
+                 headset's mic); shows a check once it is. -->
+            <Button Click="OnSetDefaultSoundClick" IsEnabled="{Binding CanSetDefaultSound}" Margin="{Binding SoundRowMargin}"
                     ToolTip="{Binding SoundTooltip}" ToolTipService.ShowOnDisabled="True"
                     Visibility="{Binding HasSound, Converter={StaticResource BoolToVis}}">
                 <Button.Style>
@@ -614,6 +660,16 @@
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding SoundButtonGlyph}" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
                     <TextBlock Text="{Binding SoundButtonText}" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <!-- Bluetooth audio and controllers: disconnect it (it stays paired). -->
+            <Button Style="{StaticResource DrawerButton}" Click="OnDisconnectClick" Margin="0,8,0,0"
+                    ToolTip="{Binding DisconnectTooltip}"
+                    Visibility="{Binding CanDisconnect, Converter={StaticResource BoolToVis}}">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="&#xE702;" FontFamily="{StaticResource IconFont}" FontSize="10" VerticalAlignment="Center" Margin="0,1,6,0"/>
+                    <TextBlock Text="Disconnect" FontSize="11" VerticalAlignment="Center"/>
                 </StackPanel>
             </Button>
 

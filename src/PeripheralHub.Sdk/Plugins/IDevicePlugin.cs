@@ -11,7 +11,8 @@ public static class PluginApi
     // 4: Transport.CoreAudio / AudioEndpoint (Windows' sound devices and the default-device switch, moved from the
     //    USB headsets plugin so the hub can offer "Set as default" for Bluetooth audio too).
     // 5: DeviceSnapshot.PairedHosts (the devices a controller is paired with, one per button).
-    public const int Version = 5;
+    // 6: IReleasableDriver (stay off a Bluetooth device while it's being disconnected).
+    public const int Version = 6;
 }
 
 /// <summary>
