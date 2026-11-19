@@ -2,6 +2,11 @@
 
 What changed in each release, newest first. Each release's notes on GitHub (and in the update) are its section here, so a version can't be published without one (see `build-installer.ps1`). Keep each bullet on one line: GitHub's release page shows line breaks as they are.
 
+## 1.4.2 (2026-11-19)
+
+### Changed
+- A DualSense's *Paired devices* list shows this PC's Bluetooth name next to *This PC*, e.g. "MY-PC (This PC)".
+
 ## 1.4.1 (2026-11-19)
 
 ### Fixed
