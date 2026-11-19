@@ -32,14 +32,14 @@ public sealed class DevicesViewModel
     /// This PC's Bluetooth addresses: read once, and again on every "Look up names" click (the first read finds none
     /// if Bluetooth wasn't ready yet).
     /// </summary>
-    private IReadOnlySet<string>? _localMacs;
+    private IReadOnlyDictionary<string, string>? _localMacs;
     private Dictionary<string, string> _windowsNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>This PC, a device paired in Windows, or a name found with "Look up names"; null when none is known.</summary>
     private string? NameForAddress(string mac)
     {
         _localMacs ??= global::PeripheralHub.Devices.BluetoothNames.LocalAddresses();
-        return _localMacs.Contains(mac) ? "This PC"
+        return _localMacs.TryGetValue(mac, out var pc) ? $"{pc} (This PC)"
             : _windowsNames.TryGetValue(mac, out var w) ? w
             : _settings.BluetoothNames.TryGetValue(mac, out var found) ? found
             : null;
@@ -53,7 +53,7 @@ public sealed class DevicesViewModel
     {
         if (vm.IsLookingUpNames) return;
         _localMacs = global::PeripheralHub.Devices.BluetoothNames.LocalAddresses(); // fresh: may have been missed at startup
-        var macs = vm.UnnamedPairedMacs.Where(m => !_localMacs.Contains(m)).ToList();
+        var macs = vm.UnnamedPairedMacs.Where(m => !_localMacs.ContainsKey(m)).ToList();
         if (macs.Count == 0) { vm.LookupStatus = null; foreach (var d in Devices) d.NamesChanged(); return; }
         vm.IsLookingUpNames = true;
         vm.LookupStatus = null;

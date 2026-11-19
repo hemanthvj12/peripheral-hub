@@ -12,10 +12,13 @@ public static class BluetoothNames
 {
     private static readonly SemaphoreSlim Gate = new(1, 1);
 
-    /// <summary>This PC's Bluetooth adapters' addresses (12 lower-case hex digits).</summary>
-    public static IReadOnlySet<string> LocalAddresses()
+    /// <summary>
+    /// This PC's Bluetooth adapters: address (12 lower-case hex digits) → the name other devices see (the adapter's
+    /// name, normally the computer name; the computer name when the adapter has none).
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> LocalAddresses()
     {
-        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var result = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             foreach (var radio in Radios())
@@ -23,7 +26,8 @@ public static class BluetoothNames
                 using (radio)
                 {
                     var info = new RadioInfo { dwSize = Marshal.SizeOf<RadioInfo>() };
-                    if (BluetoothGetRadioInfo(radio, ref info) == 0 && info.Address != 0) result.Add(Format(info.Address));
+                    if (BluetoothGetRadioInfo(radio, ref info) == 0 && info.Address != 0)
+                        result[Format(info.Address)] = string.IsNullOrWhiteSpace(info.szName) ? Environment.MachineName : info.szName.Trim();
                 }
             }
         }
