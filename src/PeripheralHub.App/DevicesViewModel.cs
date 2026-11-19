@@ -28,15 +28,22 @@ public sealed class DevicesViewModel
 
     // ---- Names for the devices a controller is paired with (its "Paired devices" list) ----
 
+    /// <summary>
+    /// This PC's Bluetooth addresses: read once, and again on every "Look up names" click (the first read finds none
+    /// if Bluetooth wasn't ready yet).
+    /// </summary>
     private IReadOnlySet<string>? _localMacs;
     private Dictionary<string, string> _windowsNames = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>This PC, a device paired in Windows, or a name found with "Look up names"; null when none is known.</summary>
-    private string? NameForAddress(string mac) =>
-        (_localMacs ??= global::PeripheralHub.Devices.BluetoothNames.LocalAddresses()).Contains(mac) ? "This PC"
-        : _windowsNames.TryGetValue(mac, out var w) ? w
-        : _settings.BluetoothNames.TryGetValue(mac, out var found) ? found
-        : null;
+    private string? NameForAddress(string mac)
+    {
+        _localMacs ??= global::PeripheralHub.Devices.BluetoothNames.LocalAddresses();
+        return _localMacs.Contains(mac) ? "This PC"
+            : _windowsNames.TryGetValue(mac, out var w) ? w
+            : _settings.BluetoothNames.TryGetValue(mac, out var found) ? found
+            : null;
+    }
 
     /// <summary>
     /// Asks the addresses in a controller's list that have no name yet for one, and keeps what's found. Takes several
@@ -44,8 +51,10 @@ public sealed class DevicesViewModel
     /// </summary>
     public async Task LookUpNamesAsync(DeviceViewModel vm)
     {
-        var macs = vm.UnnamedPairedMacs;
-        if (macs.Count == 0 || vm.IsLookingUpNames) return;
+        if (vm.IsLookingUpNames) return;
+        _localMacs = global::PeripheralHub.Devices.BluetoothNames.LocalAddresses(); // fresh: may have been missed at startup
+        var macs = vm.UnnamedPairedMacs.Where(m => !_localMacs.Contains(m)).ToList();
+        if (macs.Count == 0) { vm.LookupStatus = null; foreach (var d in Devices) d.NamesChanged(); return; }
         vm.IsLookingUpNames = true;
         vm.LookupStatus = null;
         try
